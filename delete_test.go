@@ -20,11 +20,11 @@ func TestDeleteBuilderSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql :=
+	expectedSQL :=
 		"WITH prefix AS ? " +
 			"DELETE FROM a WHERE b = ? ORDER BY c LIMIT 2 OFFSET 3 " +
 			"RETURNING ?"
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 4}
 	assert.Equal(t, expectedArgs, args)
@@ -36,11 +36,11 @@ func TestDeleteBuilderSQLErr(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDeleteBuilderMustSql(t *testing.T) {
+func TestDeleteBuilderMustSQL(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("TestDeleteBuilderMustSql should have panicked!")
+			t.Errorf("TestDeleteBuilderMustSQL should have panicked!")
 		}
 	}()
 	Delete("").MustSQL()
@@ -61,9 +61,9 @@ func TestDeleteWithQuery(t *testing.T) {
 	t.Parallel()
 	b := Delete("test").Where("id=55").Suffix("RETURNING path")
 
-	expectedSql := "DELETE FROM test WHERE id=55 RETURNING path"
+	expectedSQL := "DELETE FROM test WHERE id=55 RETURNING path"
 
 	got, args := b.MustSQL()
-	assert.Equal(t, expectedSql, got)
+	assert.Equal(t, expectedSQL, got)
 	assert.Empty(t, args)
 }

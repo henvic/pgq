@@ -42,7 +42,7 @@ func TestSelectBuilderSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql :=
+	expectedSQL :=
 		"WITH prefix AS ? " +
 			"SELECT DISTINCT a, b, c, IF(d IN (?,?,?), 1, 0) as stat_column, a > ?, " +
 			"(b IN (?,?,?)) AS b_alias, " +
@@ -52,7 +52,7 @@ func TestSelectBuilderSQL(t *testing.T) {
 			"WHERE f = ? AND g = ? AND h = ? AND i IN (?,?,?) AND (j = ? OR (k = ? AND true)) " +
 			"GROUP BY l HAVING m = n ORDER BY ? DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
 			"FETCH FIRST ? ROWS ONLY"
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 2, 3, 100, 101, 102, 103, 4, 5, 6, 7, 8, 9, 10, 11, 1, 14}
 	assert.Equal(t, expectedArgs, args)
@@ -65,8 +65,8 @@ func TestSelectBuilderFromSelect(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT a, b FROM (SELECT c FROM d WHERE i = ?) AS subq"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "SELECT a, b FROM (SELECT c FROM d WHERE i = ?) AS subq"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0}
 	assert.Equal(t, expectedArgs, args)
@@ -85,8 +85,8 @@ func TestSelectBuilderFromSelectNestedDollarPlaceholders(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT c FROM (SELECT c FROM t WHERE c > $1) AS subq WHERE c < $2"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "SELECT c FROM (SELECT c FROM t WHERE c > $1) AS subq WHERE c < $2"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1, 2}
 	assert.Equal(t, expectedArgs, args)
@@ -111,7 +111,7 @@ func TestSelectBuilderPlaceholders(t *testing.T) {
 
 func TestSelectBuilderSimpleJoin(t *testing.T) {
 	t.Parallel()
-	expectedSql := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo"
+	expectedSQL := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo"
 	expectedArgs := []any(nil)
 
 	b := Select("*").From("bar").Join("baz ON bar.foo = baz.foo")
@@ -119,13 +119,13 @@ func TestSelectBuilderSimpleJoin(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 	assert.Equal(t, args, expectedArgs)
 }
 
 func TestSelectBuilderParamJoin(t *testing.T) {
 	t.Parallel()
-	expectedSql := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo AND baz.foo = ?"
+	expectedSQL := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo AND baz.foo = ?"
 	expectedArgs := []any{42}
 
 	b := Select("*").From("bar").Join("baz ON bar.foo = baz.foo AND baz.foo = ?", 42)
@@ -133,13 +133,13 @@ func TestSelectBuilderParamJoin(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 	assert.Equal(t, args, expectedArgs)
 }
 
 func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 	t.Parallel()
-	expectedSql := "SELECT * FROM bar JOIN ( SELECT * FROM baz WHERE foo = ? ) r ON bar.foo = r.foo"
+	expectedSQL := "SELECT * FROM bar JOIN ( SELECT * FROM baz WHERE foo = ? ) r ON bar.foo = r.foo"
 	expectedArgs := []any{42}
 
 	nestedSelect := Select("*").From("baz").Where("foo = ?", 42)
@@ -149,7 +149,7 @@ func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 	assert.Equal(t, args, expectedArgs)
 }
 
@@ -181,18 +181,18 @@ func TestSelectBuilderNestedSelectDollar(t *testing.T) {
 	t.Parallel()
 	nestedBuilder := StatementBuilder.PlaceholderFormat(Dollar).Select("*").Prefix("NOT EXISTS (").
 		From("bar").Where("y = ?", 42).Suffix(")")
-	outerSql, _, err := StatementBuilder.PlaceholderFormat(Dollar).Select("*").
+	outerSQL, _, err := StatementBuilder.PlaceholderFormat(Dollar).Select("*").
 		From("foo").Where("x = ?").Where(nestedBuilder).SQL()
 
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM foo WHERE x = $1 AND NOT EXISTS ( SELECT * FROM bar WHERE y = $2 )", outerSql)
+	assert.Equal(t, "SELECT * FROM foo WHERE x = $1 AND NOT EXISTS ( SELECT * FROM bar WHERE y = $2 )", outerSQL)
 }
 
-func TestSelectBuilderMustSql(t *testing.T) {
+func TestSelectBuilderMustSQL(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("TestSelectBuilderMustSql should have panicked!")
+			t.Errorf("TestSelectBuilderMustSQL should have panicked!")
 		}
 	}()
 	// This function should cause a panic
@@ -233,8 +233,8 @@ func TestSelectSubqueryPlaceholderNumbering(t *testing.T) {
 		SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "WITH a AS ( SELECT a WHERE b = $1 ) SELECT * FROM (SELECT a WHERE b = $2) AS q WHERE c = $3"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "WITH a AS ( SELECT a WHERE b = $1 ) SELECT * FROM (SELECT a WHERE b = $2) AS q WHERE c = $3"
+	assert.Equal(t, expectedSQL, sql)
 	assert.Equal(t, []any{1, 1, 2}, args)
 }
 
@@ -249,8 +249,8 @@ func TestSelectSubqueryInConjunctionPlaceholderNumbering(t *testing.T) {
 		SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT * WHERE (EXISTS( SELECT a WHERE b = $1 )) AND c = $2"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "SELECT * WHERE (EXISTS( SELECT a WHERE b = $1 )) AND c = $2"
+	assert.Equal(t, expectedSQL, sql)
 	assert.Equal(t, []any{1, 2}, args)
 }
 
@@ -266,8 +266,8 @@ func TestSelectJoinClausePlaceholderNumbering(t *testing.T) {
 		SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT t1.a FROM t1 JOIN ( SELECT a WHERE b = $1 ) t2 ON (t1.a = t2.a) WHERE a = $2"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "SELECT t1.a FROM t1 JOIN ( SELECT a WHERE b = $1 ) t2 ON (t1.a = t2.a) WHERE a = $2"
+	assert.Equal(t, expectedSQL, sql)
 	assert.Equal(t, []any{2, 1}, args)
 }
 

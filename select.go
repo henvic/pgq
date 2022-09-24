@@ -163,7 +163,7 @@ func (b SelectBuilder) unfinalizedSQL() (string, []any, error) {
 	return data.unfinalizedSQL()
 }
 
-// MustSql builds the query into a SQL string and bound args.
+// MustSQL builds the query into a SQL string and bound args.
 // It panics if there are any errors.
 func (b SelectBuilder) MustSQL() (string, []any) {
 	sql, args, err := b.SQL()

@@ -20,13 +20,13 @@ func TestCaseWithVal(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT CASE number " +
+	expectedSQL := "SELECT CASE number " +
 		"WHEN 1 THEN one " +
 		"WHEN 2 THEN two " +
 		"ELSE ? " +
 		"END " +
 		"FROM table"
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{"big number"}
 	assert.Equal(t, expectedArgs, args)
@@ -44,11 +44,11 @@ func TestCaseWithComplexVal(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT (CASE ? > ? " +
+	expectedSQL := "SELECT (CASE ? > ? " +
 		"WHEN true THEN 'T' " +
 		"END) AS complexCase " +
 		"FROM table"
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{10, 5}
 	assert.Equal(t, expectedArgs, args)
@@ -65,13 +65,13 @@ func TestCaseWithNoVal(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT CASE " +
+	expectedSQL := "SELECT CASE " +
 		"WHEN x = ? THEN x is zero " +
 		"WHEN x > ? THEN CONCAT('x is greater than ', ?) " +
 		"END " +
 		"FROM table"
 
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 2}
 	assert.Equal(t, expectedArgs, args)
@@ -88,13 +88,13 @@ func TestCaseWithExpr(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT CASE x = ? " +
+	expectedSQL := "SELECT CASE x = ? " +
 		"WHEN true THEN ? " +
 		"ELSE 42 " +
 		"END " +
 		"FROM table"
 
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{true, "it's true!"}
 	assert.Equal(t, expectedArgs, args)
@@ -118,12 +118,12 @@ func TestMultipleCase(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	expectedSql := "SELECT " +
+	expectedSQL := "SELECT " +
 		"(CASE x = ? WHEN true THEN ? ELSE 42 END) AS case_noval, " +
 		"(CASE WHEN x = ? THEN 'x is zero' WHEN x > ? THEN CONCAT('x is greater than ', ?) END) AS case_expr " +
 		"FROM table"
 
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{
 		true, "it's true!",
@@ -146,11 +146,11 @@ func TestCaseWithNoWhenClause(t *testing.T) {
 	assert.Equal(t, "case expression must contain at lease one WHEN clause", err.Error())
 }
 
-func TestCaseBuilderMustSql(t *testing.T) {
+func TestCaseBuilderMustSQL(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("TestCaseBuilderMustSql should have panicked!")
+			t.Errorf("TestCaseBuilderMustSQL should have panicked!")
 		}
 	}()
 	Case("").MustSQL()

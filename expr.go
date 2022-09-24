@@ -90,11 +90,11 @@ func (ce concatExpr) SQL() (sql string, args []any, err error) {
 		case string:
 			sql += p
 		case SQLizer:
-			pSql, pArgs, err := p.SQL()
+			pSQL, pArgs, err := p.SQL()
 			if err != nil {
 				return "", nil, err
 			}
-			sql += pSql
+			sql += pSQL
 			args = append(args, pArgs...)
 		default:
 			return "", nil, fmt.Errorf("%#v is not a string or SQLizer", part)
@@ -141,7 +141,7 @@ type Eq map[string]any
 
 func (eq Eq) toSQL(useNotOpr bool) (sql string, args []any, err error) {
 	if len(eq) == 0 {
-		// Empty Sql{} evaluates to true.
+		// Empty SQL{} evaluates to true.
 		sql = sqlTrue
 		return
 	}
@@ -229,7 +229,7 @@ func (neq NotEq) SQL() (sql string, args []any, err error) {
 //	.Where(Like{"name": "%irrel"})
 type Like map[string]any
 
-func (lk Like) toSql(opr string) (sql string, args []any, err error) {
+func (lk Like) toSQL(opr string) (sql string, args []any, err error) {
 	var exprs []string
 	for key, val := range lk {
 		expr := ""
@@ -260,7 +260,7 @@ func (lk Like) toSql(opr string) (sql string, args []any, err error) {
 }
 
 func (lk Like) SQL() (sql string, args []any, err error) {
-	return lk.toSql("LIKE")
+	return lk.toSQL("LIKE")
 }
 
 // NotLike is syntactic sugar for use with LIKE conditions.
@@ -270,7 +270,7 @@ func (lk Like) SQL() (sql string, args []any, err error) {
 type NotLike Like
 
 func (nlk NotLike) SQL() (sql string, args []any, err error) {
-	return Like(nlk).toSql("NOT LIKE")
+	return Like(nlk).toSQL("NOT LIKE")
 }
 
 // ILike is syntactic sugar for use with ILIKE conditions.
@@ -280,7 +280,7 @@ func (nlk NotLike) SQL() (sql string, args []any, err error) {
 type ILike Like
 
 func (ilk ILike) SQL() (sql string, args []any, err error) {
-	return Like(ilk).toSql("ILIKE")
+	return Like(ilk).toSQL("ILIKE")
 }
 
 // NotILike is syntactic sugar for use with ILIKE conditions.
@@ -290,7 +290,7 @@ func (ilk ILike) SQL() (sql string, args []any, err error) {
 type NotILike Like
 
 func (nilk NotILike) SQL() (sql string, args []any, err error) {
-	return Like(nilk).toSql("NOT ILIKE")
+	return Like(nilk).toSQL("NOT ILIKE")
 }
 
 // Lt is syntactic sugar for use with Where/Having/Set methods.
@@ -299,7 +299,7 @@ func (nilk NotILike) SQL() (sql string, args []any, err error) {
 //	.Where(Lt{"id": 1})
 type Lt map[string]any
 
-func (lt Lt) toSql(opposite, orEq bool) (sql string, args []any, err error) {
+func (lt Lt) toSQL(opposite, orEq bool) (sql string, args []any, err error) {
 	var (
 		exprs []string
 		opr   = "<"
@@ -343,7 +343,7 @@ func (lt Lt) toSql(opposite, orEq bool) (sql string, args []any, err error) {
 }
 
 func (lt Lt) SQL() (sql string, args []any, err error) {
-	return lt.toSql(false, false)
+	return lt.toSQL(false, false)
 }
 
 // LtOrEq is syntactic sugar for use with Where/Having/Set methods.
@@ -353,7 +353,7 @@ func (lt Lt) SQL() (sql string, args []any, err error) {
 type LtOrEq Lt
 
 func (ltOrEq LtOrEq) SQL() (sql string, args []any, err error) {
-	return Lt(ltOrEq).toSql(false, true)
+	return Lt(ltOrEq).toSQL(false, true)
 }
 
 // Gt is syntactic sugar for use with Where/Having/Set methods.
@@ -363,7 +363,7 @@ func (ltOrEq LtOrEq) SQL() (sql string, args []any, err error) {
 type Gt Lt
 
 func (gt Gt) SQL() (sql string, args []any, err error) {
-	return Lt(gt).toSql(true, false)
+	return Lt(gt).toSQL(true, false)
 }
 
 // GtOrEq is syntactic sugar for use with Where/Having/Set methods.
@@ -373,7 +373,7 @@ func (gt Gt) SQL() (sql string, args []any, err error) {
 type GtOrEq Lt
 
 func (gtOrEq GtOrEq) SQL() (sql string, args []any, err error) {
-	return Lt(gtOrEq).toSql(true, true)
+	return Lt(gtOrEq).toSQL(true, true)
 }
 
 type conj []SQLizer

@@ -25,7 +25,7 @@ func TestUpdateBuilderSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql :=
+	expectedSQL :=
 		"WITH prefix AS ? " +
 			"UPDATE a SET b = ? + 1, c = ?, " +
 			"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
@@ -34,7 +34,7 @@ func TestUpdateBuilderSQL(t *testing.T) {
 			"WHERE d = ? " +
 			"ORDER BY e LIMIT 4 OFFSET 5 " +
 			"RETURNING ?"
-	assert.Equal(t, expectedSql, sql)
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 2, "foo", "bar", 3, 6}
 	assert.Equal(t, expectedArgs, args)
@@ -49,11 +49,11 @@ func TestUpdateBuilderSQLErr(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestUpdateBuilderMustSql(t *testing.T) {
+func TestUpdateBuilderMustSQL(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("TestUpdateBuilderMustSql should have panicked!")
+			t.Errorf("TestUpdateBuilderMustSQL should have panicked!")
 		}
 	}()
 	Update("").MustSQL()

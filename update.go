@@ -51,27 +51,27 @@ func (d *updateData) SQL() (sqlStr string, args []any, err error) {
 	sql.WriteString(d.Table)
 
 	sql.WriteString(" SET ")
-	setSqls := make([]string, len(d.SetClauses))
+	setSQLs := make([]string, len(d.SetClauses))
 	for i, setClause := range d.SetClauses {
-		var valSql string
+		var valSQL string
 		if vs, ok := setClause.value.(SQLizer); ok {
 			vsql, vargs, err := vs.SQL()
 			if err != nil {
 				return "", nil, err
 			}
 			if _, ok := vs.(SelectBuilder); ok {
-				valSql = fmt.Sprintf("(%s)", vsql)
+				valSQL = fmt.Sprintf("(%s)", vsql)
 			} else {
-				valSql = vsql
+				valSQL = vsql
 			}
 			args = append(args, vargs...)
 		} else {
-			valSql = "?"
+			valSQL = "?"
 			args = append(args, setClause.value)
 		}
-		setSqls[i] = fmt.Sprintf("%s = %s", setClause.column, valSql)
+		setSQLs[i] = fmt.Sprintf("%s = %s", setClause.column, valSQL)
 	}
-	sql.WriteString(strings.Join(setSqls, ", "))
+	sql.WriteString(strings.Join(setSQLs, ", "))
 
 	if len(d.WhereParts) > 0 {
 		sql.WriteString(" WHERE ")
@@ -133,7 +133,7 @@ func (b UpdateBuilder) SQL() (string, []any, error) {
 	return data.SQL()
 }
 
-// MustSql builds the query into a SQL string and bound args.
+// MustSQL builds the query into a SQL string and bound args.
 // It panics if there are any errors.
 func (b UpdateBuilder) MustSQL() (string, []any) {
 	sql, args, err := b.SQL()

@@ -118,10 +118,10 @@ func nestedSQL(s SQLizer) (string, []any, error) {
 
 func appendSQL(parts []SQLizer, w io.Writer, sep string, args []any) ([]any, error) {
 	for i, p := range parts {
-		partSql, partArgs, err := nestedSQL(p)
+		partSQL, partArgs, err := nestedSQL(p)
 		if err != nil {
 			return nil, err
-		} else if len(partSql) == 0 {
+		} else if len(partSQL) == 0 {
 			continue
 		}
 
@@ -132,7 +132,7 @@ func appendSQL(parts []SQLizer, w io.Writer, sep string, args []any) ([]any, err
 			}
 		}
 
-		_, err = io.WriteString(w, partSql)
+		_, err = io.WriteString(w, partSQL)
 		if err != nil {
 			return nil, err
 		}

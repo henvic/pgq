@@ -13,8 +13,8 @@ func TestConcatExpr(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "COALESCE(name,CONCAT(?,' ',?))"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "COALESCE(name,CONCAT(?,' ',?))"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{"f", "l"}
 	assert.Equal(t, expectedArgs, args)
@@ -34,8 +34,8 @@ func TestEqSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id = ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id = ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
@@ -46,8 +46,8 @@ func TestEqEmptySQL(t *testing.T) {
 	sql, args, err := Eq{}.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "(1=1)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "(1=1)"
+	assert.Equal(t, expectedSQL, sql)
 	assert.Empty(t, args)
 }
 
@@ -57,8 +57,8 @@ func TestEqInSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id IN (?,?,?)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id IN (?,?,?)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1, 2, 3}
 	assert.Equal(t, expectedArgs, args)
@@ -70,8 +70,8 @@ func TestNotEqSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id <> ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id <> ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
@@ -83,8 +83,8 @@ func TestEqNotInSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id NOT IN (?,?,?)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id NOT IN (?,?,?)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1, 2, 3}
 	assert.Equal(t, expectedArgs, args)
@@ -96,8 +96,8 @@ func TestEqInEmptySQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "(1=0)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "(1=0)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{}
 	assert.Equal(t, expectedArgs, args)
@@ -109,8 +109,8 @@ func TestNotEqInEmptySQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "(1=1)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "(1=1)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{}
 	assert.Equal(t, expectedArgs, args)
@@ -122,8 +122,8 @@ func TestEqBytesSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id = ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id = ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{[]byte("test")}
 	assert.Equal(t, expectedArgs, args)
@@ -135,8 +135,8 @@ func TestLtSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id < ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id < ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
@@ -148,8 +148,8 @@ func TestLtOrEqSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id <= ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id <= ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
@@ -161,8 +161,8 @@ func TestGtSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id > ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id > ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
@@ -174,8 +174,8 @@ func TestGtOrEqSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "id >= ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "id >= ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
@@ -189,16 +189,16 @@ func TestExprNilSQL(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, args)
 
-	expectedSql := "name IS NOT NULL"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "name IS NOT NULL"
+	assert.Equal(t, expectedSQL, sql)
 
 	b = Eq{"name": nil}
 	sql, args, err = b.SQL()
 	assert.NoError(t, err)
 	assert.Empty(t, args)
 
-	expectedSql = "name IS NULL"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL = "name IS NULL"
+	assert.Equal(t, expectedSQL, sql)
 }
 
 func TestNullTypeString(t *testing.T) {
@@ -339,8 +339,8 @@ func TestEmptyAndSQL(t *testing.T) {
 	sql, args, err := And{}.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "(1=1)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "(1=1)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{}
 	assert.Equal(t, expectedArgs, args)
@@ -351,8 +351,8 @@ func TestEmptyOrSQL(t *testing.T) {
 	sql, args, err := Or{}.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "(1=0)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "(1=0)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{}
 	assert.Equal(t, expectedArgs, args)
@@ -364,8 +364,8 @@ func TestLikeSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "name LIKE ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "name LIKE ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{"%irrel"}
 	assert.Equal(t, expectedArgs, args)
@@ -377,8 +377,8 @@ func TestNotLikeSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "name NOT LIKE ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "name NOT LIKE ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{"%irrel"}
 	assert.Equal(t, expectedArgs, args)
@@ -390,8 +390,8 @@ func TestILikeSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "name ILIKE ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "name ILIKE ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{"sq%"}
 	assert.Equal(t, expectedArgs, args)
@@ -403,34 +403,34 @@ func TestNotILikeSQL(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "name NOT ILIKE ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "name NOT ILIKE ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{"sq%"}
 	assert.Equal(t, expectedArgs, args)
 }
 
-func TestSqlEqOrder(t *testing.T) {
+func TestSQLEqOrder(t *testing.T) {
 	t.Parallel()
 	b := Eq{"a": 1, "b": 2, "c": 3}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "a = ? AND b = ? AND c = ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "a = ? AND b = ? AND c = ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1, 2, 3}
 	assert.Equal(t, expectedArgs, args)
 }
 
-func TestSqlLtOrder(t *testing.T) {
+func TestSQLLtOrder(t *testing.T) {
 	t.Parallel()
 	b := Lt{"a": 1, "b": 2, "c": 3}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "a < ? AND b < ? AND c < ?"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "a < ? AND b < ? AND c < ?"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1, 2, 3}
 	assert.Equal(t, expectedArgs, args)
@@ -442,8 +442,8 @@ func TestExprEscaped(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSql := "count(??)"
-	assert.Equal(t, expectedSql, sql)
+	expectedSQL := "count(??)"
+	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{Expr("x")}
 	assert.Equal(t, expectedArgs, args)
@@ -456,8 +456,8 @@ func TestExprRecursion(t *testing.T) {
 		sql, args, err := b.SQL()
 		assert.NoError(t, err)
 
-		expectedSql := "count(nullif(a,?))"
-		assert.Equal(t, expectedSql, sql)
+		expectedSQL := "count(nullif(a,?))"
+		assert.Equal(t, expectedSQL, sql)
 
 		expectedArgs := []any{"b"}
 		assert.Equal(t, expectedArgs, args)
@@ -467,8 +467,8 @@ func TestExprRecursion(t *testing.T) {
 		sql, args, err := b.SQL()
 		assert.NoError(t, err)
 
-		expectedSql := "extract(epoch from ?)"
-		assert.Equal(t, expectedSql, sql)
+		expectedSQL := "extract(epoch from ?)"
+		assert.Equal(t, expectedSQL, sql)
 
 		expectedArgs := []any{"2001-02-03"}
 		assert.Equal(t, expectedArgs, args)
@@ -478,8 +478,8 @@ func TestExprRecursion(t *testing.T) {
 		sql, args, err := b.SQL()
 		assert.NoError(t, err)
 
-		expectedSql := "JOIN t1 ON (id = ? AND NOT c1 AND ? @@ ?)"
-		assert.Equal(t, expectedSql, sql)
+		expectedSQL := "JOIN t1 ON (id = ? AND NOT c1 AND ? @@ ?)"
+		assert.Equal(t, expectedSQL, sql)
 
 		expectedArgs := []any{1, "x", "y"}
 		assert.Equal(t, expectedArgs, args)

@@ -99,7 +99,7 @@ func (b DeleteBuilder) SQL() (string, []any, error) {
 	return data.SQL()
 }
 
-// MustSql builds the query into a SQL string and bound args.
+// MustSQL builds the query into a SQL string and bound args.
 // It panics if there are any errors.
 func (b DeleteBuilder) MustSQL() (string, []any) {
 	sql, args, err := b.SQL()

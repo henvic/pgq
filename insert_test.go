@@ -39,11 +39,11 @@ func TestInsertBuilderSQLErr(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestInsertBuilderMustSql(t *testing.T) {
+func TestInsertBuilderMustSQL(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("TestInsertBuilderMustSql should have panicked!")
+			t.Errorf("TestInsertBuilderMustSQL should have panicked!")
 		}
 	}()
 	Insert("").MustSQL()

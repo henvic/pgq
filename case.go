@@ -19,8 +19,8 @@ type sqlizerBuffer struct {
 	err  error
 }
 
-// WriteSql converts SQLizer to SQL strings and writes it to buffer
-func (b *sqlizerBuffer) WriteSql(item SQLizer) {
+// WriteSQL converts SQLizer to SQL strings and writes it to buffer
+func (b *sqlizerBuffer) WriteSQL(item SQLizer) {
 	if b.err != nil {
 		return
 	}
@@ -71,19 +71,19 @@ func (d *caseData) SQL() (sqlStr string, args []any, err error) {
 
 	sql.WriteString("CASE ")
 	if d.What != nil {
-		sql.WriteSql(d.What)
+		sql.WriteSQL(d.What)
 	}
 
 	for _, p := range d.WhenParts {
 		sql.WriteString("WHEN ")
-		sql.WriteSql(p.when)
+		sql.WriteSQL(p.when)
 		sql.WriteString("THEN ")
-		sql.WriteSql(p.then)
+		sql.WriteSQL(p.then)
 	}
 
 	if d.Else != nil {
 		sql.WriteString("ELSE ")
-		sql.WriteSql(d.Else)
+		sql.WriteSQL(d.Else)
 	}
 
 	sql.WriteString("END")
@@ -100,7 +100,7 @@ func (b CaseBuilder) SQL() (string, []any, error) {
 	return data.SQL()
 }
 
-// MustSql builds the query into a SQL string and bound args.
+// MustSQL builds the query into a SQL string and bound args.
 // It panics if there are any errors.
 func (b CaseBuilder) MustSQL() (string, []any) {
 	sql, args, err := b.SQL()
