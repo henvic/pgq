@@ -7,6 +7,7 @@ import (
 )
 
 func TestUpdateBuilderSQL(t *testing.T) {
+	t.Parallel()
 	b := Update("").
 		Prefix("WITH prefix AS ?", 0).
 		Table("a").
@@ -40,6 +41,7 @@ func TestUpdateBuilderSQL(t *testing.T) {
 }
 
 func TestUpdateBuilderSQLErr(t *testing.T) {
+	t.Parallel()
 	_, _, err := Update("").Set("x", 1).SQL()
 	assert.Error(t, err)
 
@@ -48,6 +50,7 @@ func TestUpdateBuilderSQLErr(t *testing.T) {
 }
 
 func TestUpdateBuilderMustSql(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("TestUpdateBuilderMustSql should have panicked!")
@@ -57,6 +60,7 @@ func TestUpdateBuilderMustSql(t *testing.T) {
 }
 
 func TestUpdateBuilderPlaceholders(t *testing.T) {
+	t.Parallel()
 	b := Update("test").SetMap(Eq{"x": 1, "y": 2})
 
 	sql, _, _ := b.PlaceholderFormat(Question).SQL()

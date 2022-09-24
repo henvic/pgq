@@ -14,11 +14,13 @@ var testDebugUpdateSQL = Update("table").SetMap(Eq{"x": 1, "y": "val"})
 var expectedDebugUpateSQL = "UPDATE table SET x = '1', y = 'val'"
 
 func TestDebugSQLizerUpdateDollar(t *testing.T) {
+	t.Parallel()
 	testDebugUpdateSQL.PlaceholderFormat(Dollar)
 	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
 }
 
 func TestDebugSQLizerUpdateQuestion(t *testing.T) {
+	t.Parallel()
 	testDebugUpdateSQL.PlaceholderFormat(Question)
 	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
 }
@@ -30,11 +32,13 @@ var testDebugDeleteSQL = Delete("table").Where(And{
 var expectedDebugDeleteSQL = "DELETE FROM table WHERE (column = 'val' AND other = '1')"
 
 func TestDebugSQLizerDeleteDollar(t *testing.T) {
+	t.Parallel()
 	testDebugDeleteSQL.PlaceholderFormat(Dollar)
 	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
 }
 
 func TestDebugSQLizerDeleteQuestion(t *testing.T) {
+	t.Parallel()
 	testDebugDeleteSQL.PlaceholderFormat(Question)
 	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
 }
@@ -43,11 +47,13 @@ var testDebugInsertSQL = Insert("table").Values(1, "test")
 var expectedDebugInsertSQL = "INSERT INTO table VALUES ('1','test')"
 
 func TestDebugSQLizerInsertDollar(t *testing.T) {
+	t.Parallel()
 	testDebugInsertSQL.PlaceholderFormat(Dollar)
 	assert.Equal(t, expectedDebugInsertSQL, Debug(testDebugInsertSQL))
 }
 
 func TestDebugSQLizerInsertQuestion(t *testing.T) {
+	t.Parallel()
 	testDebugInsertSQL.PlaceholderFormat(Question)
 	assert.Equal(t, expectedDebugInsertSQL, Debug(testDebugInsertSQL))
 }
@@ -59,22 +65,26 @@ var testDebugSelectSQL = Select("*").From("table").Where(And{
 var expectedDebugSelectSQL = "SELECT * FROM table WHERE (column = 'val' AND other = '1')"
 
 func TestDebugSQLizerSelectDollar(t *testing.T) {
+	t.Parallel()
 	testDebugSelectSQL.PlaceholderFormat(Dollar)
 	assert.Equal(t, expectedDebugSelectSQL, Debug(testDebugSelectSQL))
 }
 
 func TestDebugSQLizerSelectQuestion(t *testing.T) {
+	t.Parallel()
 	testDebugSelectSQL.PlaceholderFormat(Question)
 	assert.Equal(t, expectedDebugSelectSQL, Debug(testDebugSelectSQL))
 }
 
 func TestDebug(t *testing.T) {
+	t.Parallel()
 	sqlizer := Expr("x = ? AND y = ? AND z = '??'", 1, "text")
 	expectedDebug := "x = '1' AND y = 'text' AND z = '?'"
 	assert.Equal(t, expectedDebug, Debug(sqlizer))
 }
 
 func TestDebugSQLizerErrors(t *testing.T) {
+	t.Parallel()
 	errorMsg := Debug(Expr("x = ?", 1, 2)) // Not enough placeholders
 	assert.True(t, strings.HasPrefix(errorMsg, "[DebugSQLizer error: "))
 

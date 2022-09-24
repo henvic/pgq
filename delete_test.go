@@ -7,6 +7,7 @@ import (
 )
 
 func TestDeleteBuilderSQL(t *testing.T) {
+	t.Parallel()
 	b := Delete("").
 		Prefix("WITH prefix AS ?", 0).
 		From("a").
@@ -30,11 +31,13 @@ func TestDeleteBuilderSQL(t *testing.T) {
 }
 
 func TestDeleteBuilderSQLErr(t *testing.T) {
+	t.Parallel()
 	_, _, err := Delete("").SQL()
 	assert.Error(t, err)
 }
 
 func TestDeleteBuilderMustSql(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("TestDeleteBuilderMustSql should have panicked!")
@@ -44,6 +47,7 @@ func TestDeleteBuilderMustSql(t *testing.T) {
 }
 
 func TestDeleteBuilderPlaceholders(t *testing.T) {
+	t.Parallel()
 	b := Delete("test").Where("x = ? AND y = ?", 1, 2)
 
 	sql, _, _ := b.PlaceholderFormat(Question).SQL()
@@ -54,6 +58,7 @@ func TestDeleteBuilderPlaceholders(t *testing.T) {
 }
 
 func TestDeleteWithQuery(t *testing.T) {
+	t.Parallel()
 	b := Delete("test").Where("id=55").Suffix("RETURNING path")
 
 	expectedSql := "DELETE FROM test WHERE id=55 RETURNING path"

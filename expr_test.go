@@ -8,6 +8,7 @@ import (
 )
 
 func TestConcatExpr(t *testing.T) {
+	t.Parallel()
 	b := ConcatExpr("COALESCE(name,", Expr("CONCAT(?,' ',?)", "f", "l"), ")")
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -20,6 +21,7 @@ func TestConcatExpr(t *testing.T) {
 }
 
 func TestConcatExprBadType(t *testing.T) {
+	t.Parallel()
 	b := ConcatExpr("prefix", 123, "suffix")
 	_, _, err := b.SQL()
 	assert.Error(t, err)
@@ -27,6 +29,7 @@ func TestConcatExprBadType(t *testing.T) {
 }
 
 func TestEqSQL(t *testing.T) {
+	t.Parallel()
 	b := Eq{"id": 1}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -39,6 +42,7 @@ func TestEqSQL(t *testing.T) {
 }
 
 func TestEqEmptySQL(t *testing.T) {
+	t.Parallel()
 	sql, args, err := Eq{}.SQL()
 	assert.NoError(t, err)
 
@@ -48,6 +52,7 @@ func TestEqEmptySQL(t *testing.T) {
 }
 
 func TestEqInSQL(t *testing.T) {
+	t.Parallel()
 	b := Eq{"id": []int{1, 2, 3}}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -60,6 +65,7 @@ func TestEqInSQL(t *testing.T) {
 }
 
 func TestNotEqSQL(t *testing.T) {
+	t.Parallel()
 	b := NotEq{"id": 1}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -72,6 +78,7 @@ func TestNotEqSQL(t *testing.T) {
 }
 
 func TestEqNotInSQL(t *testing.T) {
+	t.Parallel()
 	b := NotEq{"id": []int{1, 2, 3}}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -84,6 +91,7 @@ func TestEqNotInSQL(t *testing.T) {
 }
 
 func TestEqInEmptySQL(t *testing.T) {
+	t.Parallel()
 	b := Eq{"id": []int{}}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -96,6 +104,7 @@ func TestEqInEmptySQL(t *testing.T) {
 }
 
 func TestNotEqInEmptySQL(t *testing.T) {
+	t.Parallel()
 	b := NotEq{"id": []int{}}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -108,6 +117,7 @@ func TestNotEqInEmptySQL(t *testing.T) {
 }
 
 func TestEqBytesSQL(t *testing.T) {
+	t.Parallel()
 	b := Eq{"id": []byte("test")}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -120,6 +130,7 @@ func TestEqBytesSQL(t *testing.T) {
 }
 
 func TestLtSQL(t *testing.T) {
+	t.Parallel()
 	b := Lt{"id": 1}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -132,6 +143,7 @@ func TestLtSQL(t *testing.T) {
 }
 
 func TestLtOrEqSQL(t *testing.T) {
+	t.Parallel()
 	b := LtOrEq{"id": 1}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -144,6 +156,7 @@ func TestLtOrEqSQL(t *testing.T) {
 }
 
 func TestGtSQL(t *testing.T) {
+	t.Parallel()
 	b := Gt{"id": 1}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -156,6 +169,7 @@ func TestGtSQL(t *testing.T) {
 }
 
 func TestGtOrEqSQL(t *testing.T) {
+	t.Parallel()
 	b := GtOrEq{"id": 1}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -168,6 +182,7 @@ func TestGtOrEqSQL(t *testing.T) {
 }
 
 func TestExprNilSQL(t *testing.T) {
+	t.Parallel()
 	var b SQLizer
 	b = NotEq{"name": nil}
 	sql, args, err := b.SQL()
@@ -187,6 +202,7 @@ func TestExprNilSQL(t *testing.T) {
 }
 
 func TestNullTypeString(t *testing.T) {
+	t.Parallel()
 	var b SQLizer
 	var name sql.NullString
 
@@ -207,6 +223,7 @@ func TestNullTypeString(t *testing.T) {
 }
 
 func TestNullTypeInt64(t *testing.T) {
+	t.Parallel()
 	var userID sql.NullInt64
 	userID.Scan(nil)
 	b := Eq{"user_id": userID}
@@ -226,6 +243,7 @@ func TestNullTypeInt64(t *testing.T) {
 }
 
 func TestNilPointer(t *testing.T) {
+	t.Parallel()
 	var name *string = nil
 	eq := Eq{"name": name}
 	sql, args, err := eq.SQL()
@@ -270,6 +288,7 @@ func TestNilPointer(t *testing.T) {
 }
 
 func TestNotNilPointer(t *testing.T) {
+	t.Parallel()
 	c := "Name"
 	name := &c
 	eq := Eq{"name": name}
@@ -316,6 +335,7 @@ func TestNotNilPointer(t *testing.T) {
 }
 
 func TestEmptyAndSQL(t *testing.T) {
+	t.Parallel()
 	sql, args, err := And{}.SQL()
 	assert.NoError(t, err)
 
@@ -327,6 +347,7 @@ func TestEmptyAndSQL(t *testing.T) {
 }
 
 func TestEmptyOrSQL(t *testing.T) {
+	t.Parallel()
 	sql, args, err := Or{}.SQL()
 	assert.NoError(t, err)
 
@@ -338,6 +359,7 @@ func TestEmptyOrSQL(t *testing.T) {
 }
 
 func TestLikeSQL(t *testing.T) {
+	t.Parallel()
 	b := Like{"name": "%irrel"}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -350,6 +372,7 @@ func TestLikeSQL(t *testing.T) {
 }
 
 func TestNotLikeSQL(t *testing.T) {
+	t.Parallel()
 	b := NotLike{"name": "%irrel"}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -362,6 +385,7 @@ func TestNotLikeSQL(t *testing.T) {
 }
 
 func TestILikeSQL(t *testing.T) {
+	t.Parallel()
 	b := ILike{"name": "sq%"}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -374,6 +398,7 @@ func TestILikeSQL(t *testing.T) {
 }
 
 func TestNotILikeSQL(t *testing.T) {
+	t.Parallel()
 	b := NotILike{"name": "sq%"}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -386,6 +411,7 @@ func TestNotILikeSQL(t *testing.T) {
 }
 
 func TestSqlEqOrder(t *testing.T) {
+	t.Parallel()
 	b := Eq{"a": 1, "b": 2, "c": 3}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -398,6 +424,7 @@ func TestSqlEqOrder(t *testing.T) {
 }
 
 func TestSqlLtOrder(t *testing.T) {
+	t.Parallel()
 	b := Lt{"a": 1, "b": 2, "c": 3}
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -410,6 +437,7 @@ func TestSqlLtOrder(t *testing.T) {
 }
 
 func TestExprEscaped(t *testing.T) {
+	t.Parallel()
 	b := Expr("count(??)", Expr("x"))
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
@@ -422,6 +450,7 @@ func TestExprEscaped(t *testing.T) {
 }
 
 func TestExprRecursion(t *testing.T) {
+	t.Parallel()
 	{
 		b := Expr("count(?)", Expr("nullif(a,?)", "b"))
 		sql, args, err := b.SQL()

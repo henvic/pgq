@@ -97,6 +97,7 @@ func assertVals(t *testing.T, s sqrl.SelectBuilder, expected ...string) {
 }
 
 func TestSimpleSelect(t *testing.T) {
+	t.Parallel()
 	assertVals(
 		t,
 		sb.Select("v").From("squirrel_integration"),
@@ -104,6 +105,7 @@ func TestSimpleSelect(t *testing.T) {
 }
 
 func TestEq(t *testing.T) {
+	t.Parallel()
 	s := sb.Select("v").From("squirrel_integration")
 	assertVals(t, s.Where(sqrl.Eq{"k": 4}), "baz")
 	assertVals(t, s.Where(sqrl.NotEq{"k": 2}), "foo", "bar", "baz")
@@ -116,18 +118,21 @@ func TestEq(t *testing.T) {
 }
 
 func TestIneq(t *testing.T) {
+	t.Parallel()
 	s := sb.Select("v").From("squirrel_integration")
 	assertVals(t, s.Where(sqrl.Lt{"k": 3}), "foo", "foo")
 	assertVals(t, s.Where(sqrl.Gt{"k": 3}), "baz")
 }
 
 func TestConj(t *testing.T) {
+	t.Parallel()
 	s := sb.Select("v").From("squirrel_integration")
 	assertVals(t, s.Where(sqrl.And{sqrl.Gt{"k": 1}, sqrl.Lt{"k": 4}}), "bar", "foo")
 	assertVals(t, s.Where(sqrl.Or{sqrl.Gt{"k": 3}, sqrl.Lt{"k": 2}}), "foo", "baz")
 }
 
 func TestContext(t *testing.T) {
+	t.Parallel()
 	s := sb.Select("v").From("squirrel_integration")
 	ctx := context.Background()
 	_, err := s.QueryContext(ctx)

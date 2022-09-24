@@ -7,6 +7,7 @@ import (
 )
 
 func TestCaseWithVal(t *testing.T) {
+	t.Parallel()
 	caseStmt := Case("number").
 		When("1", "one").
 		When("2", "two").
@@ -32,6 +33,7 @@ func TestCaseWithVal(t *testing.T) {
 }
 
 func TestCaseWithComplexVal(t *testing.T) {
+	t.Parallel()
 	caseStmt := Case("? > ?", 10, 5).
 		When("true", "'T'")
 
@@ -53,6 +55,7 @@ func TestCaseWithComplexVal(t *testing.T) {
 }
 
 func TestCaseWithNoVal(t *testing.T) {
+	t.Parallel()
 	caseStmt := Case().
 		When(Eq{"x": 0}, "x is zero").
 		When(Expr("x > ?", 1), Expr("CONCAT('x is greater than ', ?)", 2))
@@ -75,6 +78,7 @@ func TestCaseWithNoVal(t *testing.T) {
 }
 
 func TestCaseWithExpr(t *testing.T) {
+	t.Parallel()
 	caseStmt := Case(Expr("x = ?", true)).
 		When("true", Expr("?", "it's true!")).
 		Else("42")
@@ -97,6 +101,7 @@ func TestCaseWithExpr(t *testing.T) {
 }
 
 func TestMultipleCase(t *testing.T) {
+	t.Parallel()
 	caseStmtNoval := Case(Expr("x = ?", true)).
 		When("true", Expr("?", "it's true!")).
 		Else("42")
@@ -128,6 +133,7 @@ func TestMultipleCase(t *testing.T) {
 }
 
 func TestCaseWithNoWhenClause(t *testing.T) {
+	t.Parallel()
 	caseStmt := Case("something").
 		Else("42")
 
@@ -141,6 +147,7 @@ func TestCaseWithNoWhenClause(t *testing.T) {
 }
 
 func TestCaseBuilderMustSql(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("TestCaseBuilderMustSql should have panicked!")

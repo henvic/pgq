@@ -7,6 +7,7 @@ import (
 )
 
 func TestInsertBuilderSQL(t *testing.T) {
+	t.Parallel()
 	b := Insert("").
 		Prefix("WITH prefix AS ?", 0).
 		Into("a").
@@ -30,6 +31,7 @@ func TestInsertBuilderSQL(t *testing.T) {
 }
 
 func TestInsertBuilderSQLErr(t *testing.T) {
+	t.Parallel()
 	_, _, err := Insert("").Values(1).SQL()
 	assert.Error(t, err)
 
@@ -38,6 +40,7 @@ func TestInsertBuilderSQLErr(t *testing.T) {
 }
 
 func TestInsertBuilderMustSql(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("TestInsertBuilderMustSql should have panicked!")
@@ -47,6 +50,7 @@ func TestInsertBuilderMustSql(t *testing.T) {
 }
 
 func TestInsertBuilderPlaceholders(t *testing.T) {
+	t.Parallel()
 	b := Insert("test").Values(1, 2)
 
 	sql, _, _ := b.PlaceholderFormat(Question).SQL()
@@ -57,6 +61,7 @@ func TestInsertBuilderPlaceholders(t *testing.T) {
 }
 
 func TestInsertBuilderRunners(t *testing.T) {
+	t.Parallel()
 	b := Insert("test").Values(1)
 
 	expectedSQL := "INSERT INTO test VALUES (?)"
@@ -67,6 +72,7 @@ func TestInsertBuilderRunners(t *testing.T) {
 }
 
 func TestInsertBuilderSetMap(t *testing.T) {
+	t.Parallel()
 	b := Insert("table").SetMap(Eq{"field1": 1, "field2": 2, "field3": 3})
 
 	sql, args, err := b.SQL()
@@ -80,6 +86,7 @@ func TestInsertBuilderSetMap(t *testing.T) {
 }
 
 func TestInsertBuilderSelect(t *testing.T) {
+	t.Parallel()
 	sb := Select("field1").From("table1").Where(Eq{"field1": 1})
 	ib := Insert("table2").Columns("field1").Select(sb)
 
@@ -94,6 +101,7 @@ func TestInsertBuilderSelect(t *testing.T) {
 }
 
 func TestInsertBuilderReplace(t *testing.T) {
+	t.Parallel()
 	b := Replace("table").Values(1)
 
 	expectedSQL := "REPLACE INTO table VALUES (?)"

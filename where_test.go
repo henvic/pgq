@@ -9,6 +9,7 @@ import (
 )
 
 func TestWherePartsAppendSQL(t *testing.T) {
+	t.Parallel()
 	parts := []SQLizer{
 		newWherePart("x = ?", 1),
 		newWherePart(nil),
@@ -21,28 +22,33 @@ func TestWherePartsAppendSQL(t *testing.T) {
 }
 
 func TestWherePartsAppendSQLErr(t *testing.T) {
+	t.Parallel()
 	parts := []SQLizer{newWherePart(1)}
 	_, err := appendSQL(parts, &bytes.Buffer{}, "", []any{})
 	assert.Error(t, err)
 }
 
 func TestWherePartNil(t *testing.T) {
+	t.Parallel()
 	sql, _, _ := newWherePart(nil).SQL()
 	assert.Equal(t, "", sql)
 }
 
 func TestWherePartErr(t *testing.T) {
+	t.Parallel()
 	_, _, err := newWherePart(1).SQL()
 	assert.Error(t, err)
 }
 
 func TestWherePartString(t *testing.T) {
+	t.Parallel()
 	sql, args, _ := newWherePart("x = ?", 1).SQL()
 	assert.Equal(t, "x = ?", sql)
 	assert.Equal(t, []any{1}, args)
 }
 
 func TestWherePartMap(t *testing.T) {
+	t.Parallel()
 	test := func(pred any) {
 		sql, _, _ := newWherePart(pred).SQL()
 		expect := []string{"x = ? AND y = ?", "y = ? AND x = ?"}
