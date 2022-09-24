@@ -26,14 +26,6 @@ var (
 	// Dollar is a PlaceholderFormat instance that replaces placeholders with
 	// dollar-prefixed positional placeholders (e.g. $1, $2, $3).
 	Dollar = dollarFormat{}
-
-	// Colon is a PlaceholderFormat instance that replaces placeholders with
-	// colon-prefixed positional placeholders (e.g. :1, :2, :3).
-	Colon = colonFormat{}
-
-	// AtP is a PlaceholderFormat instance that replaces placeholders with
-	// "@p"-prefixed positional placeholders (e.g. @p1, @p2, @p3).
-	AtP = atpFormat{}
 )
 
 type questionFormat struct{}
@@ -55,27 +47,6 @@ func (dollarFormat) ReplacePlaceholders(sql string) (string, error) {
 func (dollarFormat) debugPlaceholder() string {
 	return "$"
 }
-
-type colonFormat struct{}
-
-func (colonFormat) ReplacePlaceholders(sql string) (string, error) {
-	return replacePositionalPlaceholders(sql, ":")
-}
-
-func (colonFormat) debugPlaceholder() string {
-	return ":"
-}
-
-type atpFormat struct{}
-
-func (atpFormat) ReplacePlaceholders(sql string) (string, error) {
-	return replacePositionalPlaceholders(sql, "@p")
-}
-
-func (atpFormat) debugPlaceholder() string {
-	return "@p"
-}
-
 // Placeholders returns a string with count ? placeholders joined with commas.
 func Placeholders(count int) string {
 	if count < 1 {

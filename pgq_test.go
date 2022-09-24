@@ -13,16 +13,6 @@ var sqlStr = "SELECT test"
 var testDebugUpdateSQL = Update("table").SetMap(Eq{"x": 1, "y": "val"})
 var expectedDebugUpateSQL = "UPDATE table SET x = '1', y = 'val'"
 
-func TestDebugSQLizerUpdateColon(t *testing.T) {
-	testDebugUpdateSQL.PlaceholderFormat(Colon)
-	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
-}
-
-func TestDebugSQLizerUpdateAtp(t *testing.T) {
-	testDebugUpdateSQL.PlaceholderFormat(AtP)
-	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
-}
-
 func TestDebugSQLizerUpdateDollar(t *testing.T) {
 	testDebugUpdateSQL.PlaceholderFormat(Dollar)
 	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
@@ -39,16 +29,6 @@ var testDebugDeleteSQL = Delete("table").Where(And{
 })
 var expectedDebugDeleteSQL = "DELETE FROM table WHERE (column = 'val' AND other = '1')"
 
-func TestDebugSQLizerDeleteColon(t *testing.T) {
-	testDebugDeleteSQL.PlaceholderFormat(Colon)
-	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
-}
-
-func TestDebugSQLizerDeleteAtp(t *testing.T) {
-	testDebugDeleteSQL.PlaceholderFormat(AtP)
-	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
-}
-
 func TestDebugSQLizerDeleteDollar(t *testing.T) {
 	testDebugDeleteSQL.PlaceholderFormat(Dollar)
 	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
@@ -61,16 +41,6 @@ func TestDebugSQLizerDeleteQuestion(t *testing.T) {
 
 var testDebugInsertSQL = Insert("table").Values(1, "test")
 var expectedDebugInsertSQL = "INSERT INTO table VALUES ('1','test')"
-
-func TestDebugSQLizerInsertColon(t *testing.T) {
-	testDebugInsertSQL.PlaceholderFormat(Colon)
-	assert.Equal(t, expectedDebugInsertSQL, Debug(testDebugInsertSQL))
-}
-
-func TestDebugSQLizerInsertAtp(t *testing.T) {
-	testDebugInsertSQL.PlaceholderFormat(AtP)
-	assert.Equal(t, expectedDebugInsertSQL, Debug(testDebugInsertSQL))
-}
 
 func TestDebugSQLizerInsertDollar(t *testing.T) {
 	testDebugInsertSQL.PlaceholderFormat(Dollar)
@@ -87,16 +57,6 @@ var testDebugSelectSQL = Select("*").From("table").Where(And{
 	Eq{"other": 1},
 })
 var expectedDebugSelectSQL = "SELECT * FROM table WHERE (column = 'val' AND other = '1')"
-
-func TestDebugSQLizerSelectColon(t *testing.T) {
-	testDebugSelectSQL.PlaceholderFormat(Colon)
-	assert.Equal(t, expectedDebugSelectSQL, Debug(testDebugSelectSQL))
-}
-
-func TestDebugSQLizerSelectAtp(t *testing.T) {
-	testDebugSelectSQL.PlaceholderFormat(AtP)
-	assert.Equal(t, expectedDebugSelectSQL, Debug(testDebugSelectSQL))
-}
 
 func TestDebugSQLizerSelectDollar(t *testing.T) {
 	testDebugSelectSQL.PlaceholderFormat(Dollar)
