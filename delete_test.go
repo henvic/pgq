@@ -1,4 +1,4 @@
-package squirrel
+package pgq
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDeleteBuilderToSql(t *testing.T) {
+func TestDeleteBuilderSQL(t *testing.T) {
 	b := Delete("").
 		Prefix("WITH prefix AS ?", 0).
 		From("a").
@@ -16,7 +16,7 @@ func TestDeleteBuilderToSql(t *testing.T) {
 		Offset(3).
 		Suffix("RETURNING ?", 4)
 
-	sql, args, err := b.ToSql()
+	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
 	expectedSql :=
@@ -25,12 +25,12 @@ func TestDeleteBuilderToSql(t *testing.T) {
 			"RETURNING ?"
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{0, 1, 4}
+	expectedArgs := []any{0, 1, 4}
 	assert.Equal(t, expectedArgs, args)
 }
 
-func TestDeleteBuilderToSqlErr(t *testing.T) {
-	_, _, err := Delete("").ToSql()
+func TestDeleteBuilderSQLErr(t *testing.T) {
+	_, _, err := Delete("").SQL()
 	assert.Error(t, err)
 }
 
@@ -40,42 +40,25 @@ func TestDeleteBuilderMustSql(t *testing.T) {
 			t.Errorf("TestDeleteBuilderMustSql should have panicked!")
 		}
 	}()
-	Delete("").MustSql()
+	Delete("").MustSQL()
 }
 
 func TestDeleteBuilderPlaceholders(t *testing.T) {
 	b := Delete("test").Where("x = ? AND y = ?", 1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Question).ToSql()
+	sql, _, _ := b.PlaceholderFormat(Question).SQL()
 	assert.Equal(t, "DELETE FROM test WHERE x = ? AND y = ?", sql)
 
-	sql, _, _ = b.PlaceholderFormat(Dollar).ToSql()
+	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
 	assert.Equal(t, "DELETE FROM test WHERE x = $1 AND y = $2", sql)
 }
 
-func TestDeleteBuilderRunners(t *testing.T) {
-	db := &DBStub{}
-	b := Delete("test").Where("x = ?", 1).RunWith(db)
-
-	expectedSql := "DELETE FROM test WHERE x = ?"
-
-	b.Exec()
-	assert.Equal(t, expectedSql, db.LastExecSql)
-}
-
-func TestDeleteBuilderNoRunner(t *testing.T) {
-	b := Delete("test")
-
-	_, err := b.Exec()
-	assert.Equal(t, RunnerNotSet, err)
-}
-
 func TestDeleteWithQuery(t *testing.T) {
-	db := &DBStub{}
-	b := Delete("test").Where("id=55").Suffix("RETURNING path").RunWith(db)
+	b := Delete("test").Where("id=55").Suffix("RETURNING path")
 
 	expectedSql := "DELETE FROM test WHERE id=55 RETURNING path"
-	b.Query()
 
-	assert.Equal(t, expectedSql, db.LastQuerySql)
+	got, args := b.MustSQL()
+	assert.Equal(t, expectedSql, got)
+	assert.Empty(t, args)
 }

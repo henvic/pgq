@@ -1,4 +1,4 @@
-package squirrel
+package pgq
 
 import (
 	"bytes"
@@ -11,23 +11,23 @@ func init() {
 	builder.Register(CaseBuilder{}, caseData{})
 }
 
-// sqlizerBuffer is a helper that allows to write many Sqlizers one by one
-// without constant checks for errors that may come from Sqlizer
+// sqlizerBuffer is a helper that allows to write many SQLizers one by one
+// without constant checks for errors that may come from SQLizer
 type sqlizerBuffer struct {
 	bytes.Buffer
-	args []interface{}
+	args []any
 	err  error
 }
 
-// WriteSql converts Sqlizer to SQL strings and writes it to buffer
-func (b *sqlizerBuffer) WriteSql(item Sqlizer) {
+// WriteSql converts SQLizer to SQL strings and writes it to buffer
+func (b *sqlizerBuffer) WriteSql(item SQLizer) {
 	if b.err != nil {
 		return
 	}
 
 	var str string
-	var args []interface{}
-	str, args, b.err = nestedToSql(item)
+	var args []any
+	str, args, b.err = nestedSQL(item)
 
 	if b.err != nil {
 		return
@@ -38,29 +38,29 @@ func (b *sqlizerBuffer) WriteSql(item Sqlizer) {
 	b.args = append(b.args, args...)
 }
 
-func (b *sqlizerBuffer) ToSql() (string, []interface{}, error) {
+func (b *sqlizerBuffer) SQL() (string, []any, error) {
 	return b.String(), b.args, b.err
 }
 
 // whenPart is a helper structure to describe SQLs "WHEN ... THEN ..." expression
 type whenPart struct {
-	when Sqlizer
-	then Sqlizer
+	when SQLizer
+	then SQLizer
 }
 
-func newWhenPart(when interface{}, then interface{}) whenPart {
+func newWhenPart(when any, then any) whenPart {
 	return whenPart{newPart(when), newPart(then)}
 }
 
 // caseData holds all the data required to build a CASE SQL construct
 type caseData struct {
-	What      Sqlizer
+	What      SQLizer
 	WhenParts []whenPart
-	Else      Sqlizer
+	Else      SQLizer
 }
 
-// ToSql implements Sqlizer
-func (d *caseData) ToSql() (sqlStr string, args []interface{}, err error) {
+// SQL implements SQLizer
+func (d *caseData) SQL() (sqlStr string, args []any, err error) {
 	if len(d.WhenParts) == 0 {
 		err = errors.New("case expression must contain at lease one WHEN clause")
 
@@ -88,22 +88,22 @@ func (d *caseData) ToSql() (sqlStr string, args []interface{}, err error) {
 
 	sql.WriteString("END")
 
-	return sql.ToSql()
+	return sql.SQL()
 }
 
 // CaseBuilder builds SQL CASE construct which could be used as parts of queries.
 type CaseBuilder builder.Builder
 
-// ToSql builds the query into a SQL string and bound args.
-func (b CaseBuilder) ToSql() (string, []interface{}, error) {
+// SQL builds the query into a SQL string and bound args.
+func (b CaseBuilder) SQL() (string, []any, error) {
 	data := builder.GetStruct(b).(caseData)
-	return data.ToSql()
+	return data.SQL()
 }
 
 // MustSql builds the query into a SQL string and bound args.
 // It panics if there are any errors.
-func (b CaseBuilder) MustSql() (string, []interface{}) {
-	sql, args, err := b.ToSql()
+func (b CaseBuilder) MustSQL() (string, []any) {
+	sql, args, err := b.SQL()
 	if err != nil {
 		panic(err)
 	}
@@ -111,18 +111,18 @@ func (b CaseBuilder) MustSql() (string, []interface{}) {
 }
 
 // what sets optional value for CASE construct "CASE [value] ..."
-func (b CaseBuilder) what(expr interface{}) CaseBuilder {
+func (b CaseBuilder) what(expr any) CaseBuilder {
 	return builder.Set(b, "What", newPart(expr)).(CaseBuilder)
 }
 
 // When adds "WHEN ... THEN ..." part to CASE construct
-func (b CaseBuilder) When(when interface{}, then interface{}) CaseBuilder {
+func (b CaseBuilder) When(when any, then any) CaseBuilder {
 	// TODO: performance hint: replace slice of WhenPart with just slice of parts
 	// where even indices of the slice belong to "when"s and odd indices belong to "then"s
 	return builder.Append(b, "WhenParts", newWhenPart(when, then)).(CaseBuilder)
 }
 
 // What sets optional "ELSE ..." part for CASE construct
-func (b CaseBuilder) Else(expr interface{}) CaseBuilder {
+func (b CaseBuilder) Else(expr any) CaseBuilder {
 	return builder.Set(b, "Else", newPart(expr)).(CaseBuilder)
 }

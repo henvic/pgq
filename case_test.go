@@ -1,4 +1,4 @@
-package squirrel
+package pgq
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ func TestCaseWithVal(t *testing.T) {
 	qb := Select().
 		Column(caseStmt).
 		From("table")
-	sql, args, err := qb.ToSql()
+	sql, args, err := qb.SQL()
 
 	assert.NoError(t, err)
 
@@ -27,7 +27,7 @@ func TestCaseWithVal(t *testing.T) {
 		"FROM table"
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{"big number"}
+	expectedArgs := []any{"big number"}
 	assert.Equal(t, expectedArgs, args)
 }
 
@@ -38,7 +38,7 @@ func TestCaseWithComplexVal(t *testing.T) {
 	qb := Select().
 		Column(Alias(caseStmt, "complexCase")).
 		From("table")
-	sql, args, err := qb.ToSql()
+	sql, args, err := qb.SQL()
 
 	assert.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestCaseWithComplexVal(t *testing.T) {
 		"FROM table"
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{10, 5}
+	expectedArgs := []any{10, 5}
 	assert.Equal(t, expectedArgs, args)
 }
 
@@ -58,7 +58,7 @@ func TestCaseWithNoVal(t *testing.T) {
 		When(Expr("x > ?", 1), Expr("CONCAT('x is greater than ', ?)", 2))
 
 	qb := Select().Column(caseStmt).From("table")
-	sql, args, err := qb.ToSql()
+	sql, args, err := qb.SQL()
 
 	assert.NoError(t, err)
 
@@ -70,7 +70,7 @@ func TestCaseWithNoVal(t *testing.T) {
 
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{0, 1, 2}
+	expectedArgs := []any{0, 1, 2}
 	assert.Equal(t, expectedArgs, args)
 }
 
@@ -80,7 +80,7 @@ func TestCaseWithExpr(t *testing.T) {
 		Else("42")
 
 	qb := Select().Column(caseStmt).From("table")
-	sql, args, err := qb.ToSql()
+	sql, args, err := qb.SQL()
 
 	assert.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestCaseWithExpr(t *testing.T) {
 
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{true, "it's true!"}
+	expectedArgs := []any{true, "it's true!"}
 	assert.Equal(t, expectedArgs, args)
 }
 
@@ -109,7 +109,7 @@ func TestMultipleCase(t *testing.T) {
 		Column(Alias(caseStmtExpr, "case_expr")).
 		From("table")
 
-	sql, args, err := qb.ToSql()
+	sql, args, err := qb.SQL()
 
 	assert.NoError(t, err)
 
@@ -120,7 +120,7 @@ func TestMultipleCase(t *testing.T) {
 
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{
+	expectedArgs := []any{
 		true, "it's true!",
 		0, 1, 2,
 	}
@@ -133,7 +133,7 @@ func TestCaseWithNoWhenClause(t *testing.T) {
 
 	qb := Select().Column(caseStmt).From("table")
 
-	_, _, err := qb.ToSql()
+	_, _, err := qb.SQL()
 
 	assert.Error(t, err)
 
@@ -146,5 +146,5 @@ func TestCaseBuilderMustSql(t *testing.T) {
 			t.Errorf("TestCaseBuilderMustSql should have panicked!")
 		}
 	}()
-	Case("").MustSql()
+	Case("").MustSQL()
 }

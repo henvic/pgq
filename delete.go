@@ -1,8 +1,7 @@
-package squirrel
+package pgq
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"strings"
 
@@ -11,24 +10,16 @@ import (
 
 type deleteData struct {
 	PlaceholderFormat PlaceholderFormat
-	RunWith           BaseRunner
-	Prefixes          []Sqlizer
+	Prefixes          []SQLizer
 	From              string
-	WhereParts        []Sqlizer
+	WhereParts        []SQLizer
 	OrderBys          []string
 	Limit             string
 	Offset            string
-	Suffixes          []Sqlizer
+	Suffixes          []SQLizer
 }
 
-func (d *deleteData) Exec() (sql.Result, error) {
-	if d.RunWith == nil {
-		return nil, RunnerNotSet
-	}
-	return ExecWith(d.RunWith, d)
-}
-
-func (d *deleteData) ToSql() (sqlStr string, args []interface{}, err error) {
+func (d *deleteData) SQL() (sqlStr string, args []any, err error) {
 	if len(d.From) == 0 {
 		err = fmt.Errorf("delete statements must specify a From table")
 		return
@@ -37,7 +28,7 @@ func (d *deleteData) ToSql() (sqlStr string, args []interface{}, err error) {
 	sql := &bytes.Buffer{}
 
 	if len(d.Prefixes) > 0 {
-		args, err = appendToSql(d.Prefixes, sql, " ", args)
+		args, err = appendSQL(d.Prefixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -50,7 +41,7 @@ func (d *deleteData) ToSql() (sqlStr string, args []interface{}, err error) {
 
 	if len(d.WhereParts) > 0 {
 		sql.WriteString(" WHERE ")
-		args, err = appendToSql(d.WhereParts, sql, " AND ", args)
+		args, err = appendSQL(d.WhereParts, sql, " AND ", args)
 		if err != nil {
 			return
 		}
@@ -73,7 +64,7 @@ func (d *deleteData) ToSql() (sqlStr string, args []interface{}, err error) {
 
 	if len(d.Suffixes) > 0 {
 		sql.WriteString(" ")
-		args, err = appendToSql(d.Suffixes, sql, " ", args)
+		args, err = appendSQL(d.Suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -100,31 +91,18 @@ func (b DeleteBuilder) PlaceholderFormat(f PlaceholderFormat) DeleteBuilder {
 	return builder.Set(b, "PlaceholderFormat", f).(DeleteBuilder)
 }
 
-// Runner methods
-
-// RunWith sets a Runner (like database/sql.DB) to be used with e.g. Exec.
-func (b DeleteBuilder) RunWith(runner BaseRunner) DeleteBuilder {
-	return setRunWith(b, runner).(DeleteBuilder)
-}
-
-// Exec builds and Execs the query with the Runner set by RunWith.
-func (b DeleteBuilder) Exec() (sql.Result, error) {
-	data := builder.GetStruct(b).(deleteData)
-	return data.Exec()
-}
-
 // SQL methods
 
-// ToSql builds the query into a SQL string and bound args.
-func (b DeleteBuilder) ToSql() (string, []interface{}, error) {
+// SQL builds the query into a SQL string and bound args.
+func (b DeleteBuilder) SQL() (string, []any, error) {
 	data := builder.GetStruct(b).(deleteData)
-	return data.ToSql()
+	return data.SQL()
 }
 
 // MustSql builds the query into a SQL string and bound args.
 // It panics if there are any errors.
-func (b DeleteBuilder) MustSql() (string, []interface{}) {
-	sql, args, err := b.ToSql()
+func (b DeleteBuilder) MustSQL() (string, []any) {
+	sql, args, err := b.SQL()
 	if err != nil {
 		panic(err)
 	}
@@ -132,12 +110,12 @@ func (b DeleteBuilder) MustSql() (string, []interface{}) {
 }
 
 // Prefix adds an expression to the beginning of the query
-func (b DeleteBuilder) Prefix(sql string, args ...interface{}) DeleteBuilder {
+func (b DeleteBuilder) Prefix(sql string, args ...any) DeleteBuilder {
 	return b.PrefixExpr(Expr(sql, args...))
 }
 
 // PrefixExpr adds an expression to the very beginning of the query
-func (b DeleteBuilder) PrefixExpr(expr Sqlizer) DeleteBuilder {
+func (b DeleteBuilder) PrefixExpr(expr SQLizer) DeleteBuilder {
 	return builder.Append(b, "Prefixes", expr).(DeleteBuilder)
 }
 
@@ -149,7 +127,7 @@ func (b DeleteBuilder) From(from string) DeleteBuilder {
 // Where adds WHERE expressions to the query.
 //
 // See SelectBuilder.Where for more information.
-func (b DeleteBuilder) Where(pred interface{}, args ...interface{}) DeleteBuilder {
+func (b DeleteBuilder) Where(pred any, args ...any) DeleteBuilder {
 	return builder.Append(b, "WhereParts", newWherePart(pred, args...)).(DeleteBuilder)
 }
 
@@ -169,23 +147,11 @@ func (b DeleteBuilder) Offset(offset uint64) DeleteBuilder {
 }
 
 // Suffix adds an expression to the end of the query
-func (b DeleteBuilder) Suffix(sql string, args ...interface{}) DeleteBuilder {
+func (b DeleteBuilder) Suffix(sql string, args ...any) DeleteBuilder {
 	return b.SuffixExpr(Expr(sql, args...))
 }
 
 // SuffixExpr adds an expression to the end of the query
-func (b DeleteBuilder) SuffixExpr(expr Sqlizer) DeleteBuilder {
+func (b DeleteBuilder) SuffixExpr(expr SQLizer) DeleteBuilder {
 	return builder.Append(b, "Suffixes", expr).(DeleteBuilder)
-}
-
-func (b DeleteBuilder) Query() (*sql.Rows, error) {
-	data := builder.GetStruct(b).(deleteData)
-	return data.Query()
-}
-
-func (d *deleteData) Query() (*sql.Rows, error) {
-	if d.RunWith == nil {
-		return nil, RunnerNotSet
-	}
-	return QueryWith(d.RunWith, d)
 }

@@ -1,8 +1,7 @@
-package squirrel
+package pgq
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -14,43 +13,17 @@ import (
 
 type insertData struct {
 	PlaceholderFormat PlaceholderFormat
-	RunWith           BaseRunner
-	Prefixes          []Sqlizer
+	Prefixes          []SQLizer
 	StatementKeyword  string
 	Options           []string
 	Into              string
 	Columns           []string
-	Values            [][]interface{}
-	Suffixes          []Sqlizer
+	Values            [][]any
+	Suffixes          []SQLizer
 	Select            *SelectBuilder
 }
 
-func (d *insertData) Exec() (sql.Result, error) {
-	if d.RunWith == nil {
-		return nil, RunnerNotSet
-	}
-	return ExecWith(d.RunWith, d)
-}
-
-func (d *insertData) Query() (*sql.Rows, error) {
-	if d.RunWith == nil {
-		return nil, RunnerNotSet
-	}
-	return QueryWith(d.RunWith, d)
-}
-
-func (d *insertData) QueryRow() RowScanner {
-	if d.RunWith == nil {
-		return &Row{err: RunnerNotSet}
-	}
-	queryRower, ok := d.RunWith.(QueryRower)
-	if !ok {
-		return &Row{err: RunnerNotQueryRunner}
-	}
-	return QueryRowWith(queryRower, d)
-}
-
-func (d *insertData) ToSql() (sqlStr string, args []interface{}, err error) {
+func (d *insertData) SQL() (sqlStr string, args []any, err error) {
 	if len(d.Into) == 0 {
 		err = errors.New("insert statements must specify a table")
 		return
@@ -63,7 +36,7 @@ func (d *insertData) ToSql() (sqlStr string, args []interface{}, err error) {
 	sql := &bytes.Buffer{}
 
 	if len(d.Prefixes) > 0 {
-		args, err = appendToSql(d.Prefixes, sql, " ", args)
+		args, err = appendSQL(d.Prefixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -104,7 +77,7 @@ func (d *insertData) ToSql() (sqlStr string, args []interface{}, err error) {
 
 	if len(d.Suffixes) > 0 {
 		sql.WriteString(" ")
-		args, err = appendToSql(d.Suffixes, sql, " ", args)
+		args, err = appendSQL(d.Suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -114,7 +87,7 @@ func (d *insertData) ToSql() (sqlStr string, args []interface{}, err error) {
 	return
 }
 
-func (d *insertData) appendValuesToSQL(w io.Writer, args []interface{}) ([]interface{}, error) {
+func (d *insertData) appendValuesToSQL(w io.Writer, args []any) ([]any, error) {
 	if len(d.Values) == 0 {
 		return args, errors.New("values for insert statements are not set")
 	}
@@ -125,8 +98,8 @@ func (d *insertData) appendValuesToSQL(w io.Writer, args []interface{}) ([]inter
 	for r, row := range d.Values {
 		valueStrings := make([]string, len(row))
 		for v, val := range row {
-			if vs, ok := val.(Sqlizer); ok {
-				vsql, vargs, err := vs.ToSql()
+			if vs, ok := val.(SQLizer); ok {
+				vsql, vargs, err := vs.SQL()
 				if err != nil {
 					return nil, err
 				}
@@ -145,12 +118,12 @@ func (d *insertData) appendValuesToSQL(w io.Writer, args []interface{}) ([]inter
 	return args, nil
 }
 
-func (d *insertData) appendSelectToSQL(w io.Writer, args []interface{}) ([]interface{}, error) {
+func (d *insertData) appendSelectToSQL(w io.Writer, args []any) ([]any, error) {
 	if d.Select == nil {
 		return args, errors.New("select clause for insert statements are not set")
 	}
 
-	selectClause, sArgs, err := d.Select.ToSql()
+	selectClause, sArgs, err := d.Select.SQL()
 	if err != nil {
 		return args, err
 	}
@@ -178,48 +151,18 @@ func (b InsertBuilder) PlaceholderFormat(f PlaceholderFormat) InsertBuilder {
 	return builder.Set(b, "PlaceholderFormat", f).(InsertBuilder)
 }
 
-// Runner methods
-
-// RunWith sets a Runner (like database/sql.DB) to be used with e.g. Exec.
-func (b InsertBuilder) RunWith(runner BaseRunner) InsertBuilder {
-	return setRunWith(b, runner).(InsertBuilder)
-}
-
-// Exec builds and Execs the query with the Runner set by RunWith.
-func (b InsertBuilder) Exec() (sql.Result, error) {
-	data := builder.GetStruct(b).(insertData)
-	return data.Exec()
-}
-
-// Query builds and Querys the query with the Runner set by RunWith.
-func (b InsertBuilder) Query() (*sql.Rows, error) {
-	data := builder.GetStruct(b).(insertData)
-	return data.Query()
-}
-
-// QueryRow builds and QueryRows the query with the Runner set by RunWith.
-func (b InsertBuilder) QueryRow() RowScanner {
-	data := builder.GetStruct(b).(insertData)
-	return data.QueryRow()
-}
-
-// Scan is a shortcut for QueryRow().Scan.
-func (b InsertBuilder) Scan(dest ...interface{}) error {
-	return b.QueryRow().Scan(dest...)
-}
-
 // SQL methods
 
-// ToSql builds the query into a SQL string and bound args.
-func (b InsertBuilder) ToSql() (string, []interface{}, error) {
+// SQL builds the query into a SQL string and bound args.
+func (b InsertBuilder) SQL() (string, []any, error) {
 	data := builder.GetStruct(b).(insertData)
-	return data.ToSql()
+	return data.SQL()
 }
 
 // MustSql builds the query into a SQL string and bound args.
 // It panics if there are any errors.
-func (b InsertBuilder) MustSql() (string, []interface{}) {
-	sql, args, err := b.ToSql()
+func (b InsertBuilder) MustSQL() (string, []any) {
+	sql, args, err := b.SQL()
 	if err != nil {
 		panic(err)
 	}
@@ -227,12 +170,12 @@ func (b InsertBuilder) MustSql() (string, []interface{}) {
 }
 
 // Prefix adds an expression to the beginning of the query
-func (b InsertBuilder) Prefix(sql string, args ...interface{}) InsertBuilder {
+func (b InsertBuilder) Prefix(sql string, args ...any) InsertBuilder {
 	return b.PrefixExpr(Expr(sql, args...))
 }
 
 // PrefixExpr adds an expression to the very beginning of the query
-func (b InsertBuilder) PrefixExpr(expr Sqlizer) InsertBuilder {
+func (b InsertBuilder) PrefixExpr(expr SQLizer) InsertBuilder {
 	return builder.Append(b, "Prefixes", expr).(InsertBuilder)
 }
 
@@ -252,23 +195,23 @@ func (b InsertBuilder) Columns(columns ...string) InsertBuilder {
 }
 
 // Values adds a single row's values to the query.
-func (b InsertBuilder) Values(values ...interface{}) InsertBuilder {
+func (b InsertBuilder) Values(values ...any) InsertBuilder {
 	return builder.Append(b, "Values", values).(InsertBuilder)
 }
 
 // Suffix adds an expression to the end of the query
-func (b InsertBuilder) Suffix(sql string, args ...interface{}) InsertBuilder {
+func (b InsertBuilder) Suffix(sql string, args ...any) InsertBuilder {
 	return b.SuffixExpr(Expr(sql, args...))
 }
 
 // SuffixExpr adds an expression to the end of the query
-func (b InsertBuilder) SuffixExpr(expr Sqlizer) InsertBuilder {
+func (b InsertBuilder) SuffixExpr(expr SQLizer) InsertBuilder {
 	return builder.Append(b, "Suffixes", expr).(InsertBuilder)
 }
 
 // SetMap set columns and values for insert builder from a map of column name and value
 // note that it will reset all previous columns and values was set if any
-func (b InsertBuilder) SetMap(clauses map[string]interface{}) InsertBuilder {
+func (b InsertBuilder) SetMap(clauses map[string]any) InsertBuilder {
 	// Keep the columns in a consistent order by sorting the column key string.
 	cols := make([]string, 0, len(clauses))
 	for col := range clauses {
@@ -276,13 +219,13 @@ func (b InsertBuilder) SetMap(clauses map[string]interface{}) InsertBuilder {
 	}
 	sort.Strings(cols)
 
-	vals := make([]interface{}, 0, len(clauses))
+	vals := make([]any, 0, len(clauses))
 	for _, col := range cols {
 		vals = append(vals, clauses[col])
 	}
 
 	b = builder.Set(b, "Columns", cols).(InsertBuilder)
-	b = builder.Set(b, "Values", [][]interface{}{vals}).(InsertBuilder)
+	b = builder.Set(b, "Values", [][]any{vals}).(InsertBuilder)
 
 	return b
 }

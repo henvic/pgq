@@ -1,4 +1,4 @@
-package squirrel
+package pgq
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInsertBuilderToSql(t *testing.T) {
+func TestInsertBuilderSQL(t *testing.T) {
 	b := Insert("").
 		Prefix("WITH prefix AS ?", 0).
 		Into("a").
@@ -16,7 +16,7 @@ func TestInsertBuilderToSql(t *testing.T) {
 		Values(3, Expr("? + 1", 4)).
 		Suffix("RETURNING ?", 5)
 
-	sql, args, err := b.ToSql()
+	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
 	expectedSQL :=
@@ -25,15 +25,15 @@ func TestInsertBuilderToSql(t *testing.T) {
 			"RETURNING ?"
 	assert.Equal(t, expectedSQL, sql)
 
-	expectedArgs := []interface{}{0, 1, 2, 3, 4, 5}
+	expectedArgs := []any{0, 1, 2, 3, 4, 5}
 	assert.Equal(t, expectedArgs, args)
 }
 
-func TestInsertBuilderToSqlErr(t *testing.T) {
-	_, _, err := Insert("").Values(1).ToSql()
+func TestInsertBuilderSQLErr(t *testing.T) {
+	_, _, err := Insert("").Values(1).SQL()
 	assert.Error(t, err)
 
-	_, _, err = Insert("x").ToSql()
+	_, _, err = Insert("x").SQL()
 	assert.Error(t, err)
 }
 
@@ -43,46 +43,39 @@ func TestInsertBuilderMustSql(t *testing.T) {
 			t.Errorf("TestInsertBuilderMustSql should have panicked!")
 		}
 	}()
-	Insert("").MustSql()
+	Insert("").MustSQL()
 }
 
 func TestInsertBuilderPlaceholders(t *testing.T) {
 	b := Insert("test").Values(1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Question).ToSql()
+	sql, _, _ := b.PlaceholderFormat(Question).SQL()
 	assert.Equal(t, "INSERT INTO test VALUES (?,?)", sql)
 
-	sql, _, _ = b.PlaceholderFormat(Dollar).ToSql()
+	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
 	assert.Equal(t, "INSERT INTO test VALUES ($1,$2)", sql)
 }
 
 func TestInsertBuilderRunners(t *testing.T) {
-	db := &DBStub{}
-	b := Insert("test").Values(1).RunWith(db)
+	b := Insert("test").Values(1)
 
 	expectedSQL := "INSERT INTO test VALUES (?)"
 
-	b.Exec()
-	assert.Equal(t, expectedSQL, db.LastExecSql)
-}
-
-func TestInsertBuilderNoRunner(t *testing.T) {
-	b := Insert("test").Values(1)
-
-	_, err := b.Exec()
-	assert.Equal(t, RunnerNotSet, err)
+	got, args := b.MustSQL()
+	assert.Equal(t, expectedSQL, got)
+	assert.Len(t, args, 1)
 }
 
 func TestInsertBuilderSetMap(t *testing.T) {
 	b := Insert("table").SetMap(Eq{"field1": 1, "field2": 2, "field3": 3})
 
-	sql, args, err := b.ToSql()
+	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
 	expectedSQL := "INSERT INTO table (field1,field2,field3) VALUES (?,?,?)"
 	assert.Equal(t, expectedSQL, sql)
 
-	expectedArgs := []interface{}{1, 2, 3}
+	expectedArgs := []any{1, 2, 3}
 	assert.Equal(t, expectedArgs, args)
 }
 
@@ -90,13 +83,13 @@ func TestInsertBuilderSelect(t *testing.T) {
 	sb := Select("field1").From("table1").Where(Eq{"field1": 1})
 	ib := Insert("table2").Columns("field1").Select(sb)
 
-	sql, args, err := ib.ToSql()
+	sql, args, err := ib.SQL()
 	assert.NoError(t, err)
 
 	expectedSQL := "INSERT INTO table2 (field1) SELECT field1 FROM table1 WHERE field1 = ?"
 	assert.Equal(t, expectedSQL, sql)
 
-	expectedArgs := []interface{}{1}
+	expectedArgs := []any{1}
 	assert.Equal(t, expectedArgs, args)
 }
 
@@ -105,7 +98,7 @@ func TestInsertBuilderReplace(t *testing.T) {
 
 	expectedSQL := "REPLACE INTO table VALUES (?)"
 
-	sql, _, err := b.ToSql()
+	sql, _, err := b.SQL()
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedSQL, sql)

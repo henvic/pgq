@@ -1,4 +1,4 @@
-package squirrel
+package pgq
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUpdateBuilderToSql(t *testing.T) {
+func TestUpdateBuilderSQL(t *testing.T) {
 	b := Update("").
 		Prefix("WITH prefix AS ?", 0).
 		Table("a").
@@ -21,7 +21,7 @@ func TestUpdateBuilderToSql(t *testing.T) {
 		Offset(5).
 		Suffix("RETURNING ?", 6)
 
-	sql, args, err := b.ToSql()
+	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
 	expectedSql :=
@@ -35,15 +35,15 @@ func TestUpdateBuilderToSql(t *testing.T) {
 			"RETURNING ?"
 	assert.Equal(t, expectedSql, sql)
 
-	expectedArgs := []interface{}{0, 1, 2, "foo", "bar", 3, 6}
+	expectedArgs := []any{0, 1, 2, "foo", "bar", 3, 6}
 	assert.Equal(t, expectedArgs, args)
 }
 
-func TestUpdateBuilderToSqlErr(t *testing.T) {
-	_, _, err := Update("").Set("x", 1).ToSql()
+func TestUpdateBuilderSQLErr(t *testing.T) {
+	_, _, err := Update("").Set("x", 1).SQL()
 	assert.Error(t, err)
 
-	_, _, err = Update("x").ToSql()
+	_, _, err = Update("x").SQL()
 	assert.Error(t, err)
 }
 
@@ -53,32 +53,15 @@ func TestUpdateBuilderMustSql(t *testing.T) {
 			t.Errorf("TestUpdateBuilderMustSql should have panicked!")
 		}
 	}()
-	Update("").MustSql()
+	Update("").MustSQL()
 }
 
 func TestUpdateBuilderPlaceholders(t *testing.T) {
 	b := Update("test").SetMap(Eq{"x": 1, "y": 2})
 
-	sql, _, _ := b.PlaceholderFormat(Question).ToSql()
+	sql, _, _ := b.PlaceholderFormat(Question).SQL()
 	assert.Equal(t, "UPDATE test SET x = ?, y = ?", sql)
 
-	sql, _, _ = b.PlaceholderFormat(Dollar).ToSql()
+	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
 	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
-}
-
-func TestUpdateBuilderRunners(t *testing.T) {
-	db := &DBStub{}
-	b := Update("test").Set("x", 1).RunWith(db)
-
-	expectedSql := "UPDATE test SET x = ?"
-
-	b.Exec()
-	assert.Equal(t, expectedSql, db.LastExecSql)
-}
-
-func TestUpdateBuilderNoRunner(t *testing.T) {
-	b := Update("test").Set("x", 1)
-
-	_, err := b.Exec()
-	assert.Equal(t, RunnerNotSet, err)
 }

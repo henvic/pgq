@@ -1,4 +1,4 @@
-package squirrel
+package pgq
 
 import (
 	"bytes"
