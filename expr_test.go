@@ -1,7 +1,6 @@
 package pgq
 
 import (
-	"database/sql"
 	"reflect"
 	"testing"
 )
@@ -296,7 +295,7 @@ func TestExprNilSQL(t *testing.T) {
 func TestNullTypeString(t *testing.T) {
 	t.Parallel()
 	var b SQLizer
-	var name sql.NullString
+	var name *string
 
 	b = Eq{"name": name}
 	sql, args, err := b.SQL()
@@ -311,7 +310,7 @@ func TestNullTypeString(t *testing.T) {
 		t.Errorf("expected args to be %q, got %q instead", want, sql)
 	}
 
-	name.Scan("Name")
+	name = ptr("Name")
 	b = Eq{"name": name}
 	sql, args, err = b.SQL()
 
@@ -328,8 +327,7 @@ func TestNullTypeString(t *testing.T) {
 
 func TestNullTypeInt64(t *testing.T) {
 	t.Parallel()
-	var userID sql.NullInt64
-	userID.Scan(nil)
+	var userID *int64
 	b := Eq{"user_id": userID}
 	sql, args, err := b.SQL()
 
@@ -343,7 +341,7 @@ func TestNullTypeInt64(t *testing.T) {
 		t.Errorf("expected args to be %q, got %q instead", want, sql)
 	}
 
-	userID.Scan(int64(10))
+	userID = ptr(int64(10))
 	b = Eq{"user_id": userID}
 	sql, args, err = b.SQL()
 
@@ -750,4 +748,8 @@ func ExampleEq() {
 	Select("id", "created", "first_name").From("users").Where(Eq{
 		"company": 20,
 	})
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }

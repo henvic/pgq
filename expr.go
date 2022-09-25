@@ -2,11 +2,11 @@ package pgq
 
 import (
 	"bytes"
-	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
@@ -157,7 +157,7 @@ func (eq Eq) toSQL(useNotOpr bool) (sql string, args []any, err error) {
 		val := eq[key]
 
 		switch v := val.(type) {
-		case driver.Valuer:
+		case Valuer:
 			if val, err = v.Value(); err != nil {
 				return
 			}
@@ -223,7 +223,7 @@ func (lk Like) toSQL(opr string) (sql string, args []any, err error) {
 		expr := ""
 
 		switch v := val.(type) {
-		case driver.Valuer:
+		case Valuer:
 			if val, err = v.Value(); err != nil {
 				return
 			}
@@ -307,7 +307,7 @@ func (lt Lt) toSQL(opposite, orEq bool) (sql string, args []any, err error) {
 		val := lt[key]
 
 		switch v := val.(type) {
-		case driver.Valuer:
+		case Valuer:
 			if val, err = v.Value(); err != nil {
 				return
 			}
@@ -409,9 +409,35 @@ func getSortedKeys(exp map[string]any) []string {
 }
 
 func isListType(val any) bool {
-	if driver.IsValue(val) {
+	if isValue(val) {
 		return false
 	}
 	valVal := reflect.ValueOf(val)
 	return valVal.Kind() == reflect.Array || valVal.Kind() == reflect.Slice
+}
+
+// Valuer is the interface providing the Value method.
+//
+// Types implementing Valuer interface are able to convert
+// themselves to a driver Value.
+//
+// Similar to database/sql/driver.Value, but returns any instead of driver.Value.
+type Valuer interface {
+	// Value returns a driver Value.
+	// Value must not panic.
+	Value() (any, error)
+}
+
+// isValue reports whether v is a valid Value parameter type.
+//
+// Similar to database/sql/driver.IsValue, but doesn't accept driver.decimalDecompose.
+func isValue(v any) bool {
+	if v == nil {
+		return true
+	}
+	switch v.(type) {
+	case []byte, bool, float64, int64, string, time.Time:
+		return true
+	}
+	return false
 }
