@@ -83,14 +83,6 @@ func init() {
 	builder.Register(DeleteBuilder{}, deleteData{})
 }
 
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b DeleteBuilder) PlaceholderFormat(f PlaceholderFormat) DeleteBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(DeleteBuilder)
-}
-
 // SQL methods
 
 // SQL builds the query into a SQL string and bound args.
@@ -154,4 +146,12 @@ func (b DeleteBuilder) Suffix(sql string, args ...any) DeleteBuilder {
 // SuffixExpr adds an expression to the end of the query
 func (b DeleteBuilder) SuffixExpr(expr SQLizer) DeleteBuilder {
 	return builder.Append(b, "Suffixes", expr).(DeleteBuilder)
+}
+
+// Format methods
+
+// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
+// query.
+func (b DeleteBuilder) PlaceholderFormat(f PlaceholderFormat) DeleteBuilder {
+	return builder.Set(b, "PlaceholderFormat", f).(DeleteBuilder)
 }

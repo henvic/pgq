@@ -1,96 +1,44 @@
 package pgq
 
 import (
-	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
-
-var sqlizer = Select("test")
-var sqlStr = "SELECT test"
-
-var testDebugUpdateSQL = Update("table").SetMap(Eq{"x": 1, "y": "val"})
-var expectedDebugUpateSQL = "UPDATE table SET x = '1', y = 'val'"
-
-func TestDebugSQLizerUpdateDollar(t *testing.T) {
-	t.Parallel()
-	testDebugUpdateSQL.PlaceholderFormat(Dollar)
-	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
-}
-
-func TestDebugSQLizerUpdateQuestion(t *testing.T) {
-	t.Parallel()
-	testDebugUpdateSQL.PlaceholderFormat(Question)
-	assert.Equal(t, expectedDebugUpateSQL, Debug(testDebugUpdateSQL))
-}
-
-var testDebugDeleteSQL = Delete("table").Where(And{
-	Eq{"column": "val"},
-	Eq{"other": 1},
-})
-var expectedDebugDeleteSQL = "DELETE FROM table WHERE (column = 'val' AND other = '1')"
-
-func TestDebugSQLizerDeleteDollar(t *testing.T) {
-	t.Parallel()
-	testDebugDeleteSQL.PlaceholderFormat(Dollar)
-	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
-}
-
-func TestDebugSQLizerDeleteQuestion(t *testing.T) {
-	t.Parallel()
-	testDebugDeleteSQL.PlaceholderFormat(Question)
-	assert.Equal(t, expectedDebugDeleteSQL, Debug(testDebugDeleteSQL))
-}
-
-var testDebugInsertSQL = Insert("table").Values(1, "test")
-var expectedDebugInsertSQL = "INSERT INTO table VALUES ('1','test')"
-
-func TestDebugSQLizerInsertDollar(t *testing.T) {
-	t.Parallel()
-	testDebugInsertSQL.PlaceholderFormat(Dollar)
-	assert.Equal(t, expectedDebugInsertSQL, Debug(testDebugInsertSQL))
-}
-
-func TestDebugSQLizerInsertQuestion(t *testing.T) {
-	t.Parallel()
-	testDebugInsertSQL.PlaceholderFormat(Question)
-	assert.Equal(t, expectedDebugInsertSQL, Debug(testDebugInsertSQL))
-}
-
-var testDebugSelectSQL = Select("*").From("table").Where(And{
-	Eq{"column": "val"},
-	Eq{"other": 1},
-})
-var expectedDebugSelectSQL = "SELECT * FROM table WHERE (column = 'val' AND other = '1')"
-
-func TestDebugSQLizerSelectDollar(t *testing.T) {
-	t.Parallel()
-	testDebugSelectSQL.PlaceholderFormat(Dollar)
-	assert.Equal(t, expectedDebugSelectSQL, Debug(testDebugSelectSQL))
-}
-
-func TestDebugSQLizerSelectQuestion(t *testing.T) {
-	t.Parallel()
-	testDebugSelectSQL.PlaceholderFormat(Question)
-	assert.Equal(t, expectedDebugSelectSQL, Debug(testDebugSelectSQL))
-}
 
 func TestDebug(t *testing.T) {
 	t.Parallel()
 	sqlizer := Expr("x = ? AND y = ? AND z = '??'", 1, "text")
 	expectedDebug := "x = '1' AND y = 'text' AND z = '?'"
-	assert.Equal(t, expectedDebug, Debug(sqlizer))
+	if got := Debug(sqlizer); got != expectedDebug {
+		t.Errorf("expected %q, got %q instead", got, expectedDebug)
+	}
 }
 
 func TestDebugSQLizerErrors(t *testing.T) {
 	t.Parallel()
-	errorMsg := Debug(Expr("x = ?", 1, 2)) // Not enough placeholders
-	assert.True(t, strings.HasPrefix(errorMsg, "[DebugSQLizer error: "))
+	var errorMessages = []struct {
+		s    SQLizer
+		want string
+	}{
+		// Not enough placeholders
+		{
+			s:    Expr("x = ?", 1, 2),
+			want: "[DebugSQLizer error: not enough placeholders in \"\" for 2 args]",
+		},
+		// Too many placeholders
+		{
+			s:    Expr("x = ? AND y = ?", 1),
+			want: "[DebugSQLizer error: too many placeholders in \" AND y = ?\" for 1 args]",
+		},
+		// Cannot use nil values with Lt
+		{
+			s:    Lt{"x": nil},
+			want: "[SQL error: cannot use null with less than or greater than operators]",
+		},
+	}
 
-	errorMsg = Debug(Expr("x = ? AND y = ?", 1)) // Too many placeholders
-	assert.True(t, strings.HasPrefix(errorMsg, "[DebugSQLizer error: "))
-
-	errorMsg = Debug(Lt{"x": nil}) // Cannot use nil values with Lt
-	assert.True(t, strings.HasPrefix(errorMsg, "[SQL error: "))
+	for _, m := range errorMessages {
+		if msg := Debug(m.s); msg != m.want {
+			t.Errorf("expected %q, got error message = %q instead", m.want, msg)
+		}
+	}
 }

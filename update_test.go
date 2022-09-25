@@ -26,14 +26,14 @@ func TestUpdateBuilderSQL(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedSQL :=
-		"WITH prefix AS ? " +
-			"UPDATE a SET b = ? + 1, c = ?, " +
+		"WITH prefix AS $1 " +
+			"UPDATE a SET b = $2 + 1, c = $3, " +
 			"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
-			"c2 = CASE WHEN a = 2 THEN ? WHEN a = 3 THEN ? END, " +
+			"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
 			"c3 = (SELECT a FROM b) " +
-			"WHERE d = ? " +
+			"WHERE d = $6 " +
 			"ORDER BY e LIMIT 4 OFFSET 5 " +
-			"RETURNING ?"
+			"RETURNING $7"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 2, "foo", "bar", 3, 6}
@@ -63,9 +63,6 @@ func TestUpdateBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Update("test").SetMap(Eq{"x": 1, "y": 2})
 
-	sql, _, _ := b.PlaceholderFormat(Question).SQL()
-	assert.Equal(t, "UPDATE test SET x = ?, y = ?", sql)
-
-	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.PlaceholderFormat(Dollar).SQL()
 	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
 }

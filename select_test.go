@@ -43,15 +43,15 @@ func TestSelectBuilderSQL(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedSQL :=
-		"WITH prefix AS ? " +
-			"SELECT DISTINCT a, b, c, IF(d IN (?,?,?), 1, 0) as stat_column, a > ?, " +
-			"(b IN (?,?,?)) AS b_alias, " +
+		"WITH prefix AS $1 " +
+			"SELECT DISTINCT a, b, c, IF(d IN ($2,$3,$4), 1, 0) as stat_column, a > $5, " +
+			"(b IN ($6,$7,$8)) AS b_alias, " +
 			"(SELECT aa, bb FROM dd) AS subq " +
 			"FROM e " +
 			"CROSS JOIN j1 JOIN j2 LEFT JOIN j3 RIGHT JOIN j4 INNER JOIN j5 CROSS JOIN j6 " +
-			"WHERE f = ? AND g = ? AND h = ? AND i IN (?,?,?) AND (j = ? OR (k = ? AND true)) " +
-			"GROUP BY l HAVING m = n ORDER BY ? DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
-			"FETCH FIRST ? ROWS ONLY"
+			"WHERE f = $9 AND g = $10 AND h = $11 AND i IN ($12,$13,$14) AND (j = $15 OR (k = $16 AND true)) " +
+			"GROUP BY l HAVING m = n ORDER BY $17 DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
+			"FETCH FIRST $18 ROWS ONLY"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 2, 3, 100, 101, 102, 103, 4, 5, 6, 7, 8, 9, 10, 11, 1, 14}
@@ -65,7 +65,7 @@ func TestSelectBuilderFromSelect(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSQL := "SELECT a, b FROM (SELECT c FROM d WHERE i = ?) AS subq"
+	expectedSQL := "SELECT a, b FROM (SELECT c FROM d WHERE i = $1) AS subq"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0}
@@ -125,7 +125,7 @@ func TestSelectBuilderSimpleJoin(t *testing.T) {
 
 func TestSelectBuilderParamJoin(t *testing.T) {
 	t.Parallel()
-	expectedSQL := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo AND baz.foo = ?"
+	expectedSQL := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo AND baz.foo = $1"
 	expectedArgs := []any{42}
 
 	b := Select("*").From("bar").Join("baz ON bar.foo = baz.foo AND baz.foo = ?", 42)
@@ -139,7 +139,7 @@ func TestSelectBuilderParamJoin(t *testing.T) {
 
 func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 	t.Parallel()
-	expectedSQL := "SELECT * FROM bar JOIN ( SELECT * FROM baz WHERE foo = ? ) r ON bar.foo = r.foo"
+	expectedSQL := "SELECT * FROM bar JOIN ( SELECT * FROM baz WHERE foo = $1 ) r ON bar.foo = r.foo"
 	expectedArgs := []any{42}
 
 	nestedSelect := Select("*").From("baz").Where("foo = ?", 42)

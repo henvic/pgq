@@ -7,13 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestQuestion(t *testing.T) {
-	t.Parallel()
-	sql := "x = ? AND y = ?"
-	s, _ := Question.ReplacePlaceholders(sql)
-	assert.Equal(t, sql, s)
-}
-
 func TestDollar(t *testing.T) {
 	t.Parallel()
 	sql := "x = ? AND y = ?"

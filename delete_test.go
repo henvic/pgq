@@ -21,9 +21,9 @@ func TestDeleteBuilderSQL(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedSQL :=
-		"WITH prefix AS ? " +
-			"DELETE FROM a WHERE b = ? ORDER BY c LIMIT 2 OFFSET 3 " +
-			"RETURNING ?"
+		"WITH prefix AS $1 " +
+			"DELETE FROM a WHERE b = $2 ORDER BY c LIMIT 2 OFFSET 3 " +
+			"RETURNING $3"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 4}
@@ -50,10 +50,7 @@ func TestDeleteBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Delete("test").Where("x = ? AND y = ?", 1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Question).SQL()
-	assert.Equal(t, "DELETE FROM test WHERE x = ? AND y = ?", sql)
-
-	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.PlaceholderFormat(Dollar).SQL()
 	assert.Equal(t, "DELETE FROM test WHERE x = $1 AND y = $2", sql)
 }
 

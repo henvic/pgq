@@ -143,14 +143,6 @@ func init() {
 	builder.Register(InsertBuilder{}, insertData{})
 }
 
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b InsertBuilder) PlaceholderFormat(f PlaceholderFormat) InsertBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(InsertBuilder)
-}
-
 // SQL methods
 
 // SQL builds the query into a SQL string and bound args.
@@ -238,4 +230,12 @@ func (b InsertBuilder) Select(sb SelectBuilder) InsertBuilder {
 
 func (b InsertBuilder) statementKeyword(keyword string) InsertBuilder {
 	return builder.Set(b, "StatementKeyword", keyword).(InsertBuilder)
+}
+
+// Format methods
+
+// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
+// query.
+func (b InsertBuilder) PlaceholderFormat(f PlaceholderFormat) InsertBuilder {
+	return builder.Set(b, "PlaceholderFormat", f).(InsertBuilder)
 }

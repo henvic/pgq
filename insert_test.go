@@ -21,9 +21,9 @@ func TestInsertBuilderSQL(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedSQL :=
-		"WITH prefix AS ? " +
-			"INSERT DELAYED IGNORE INTO a (b,c) VALUES (?,?),(?,? + 1) " +
-			"RETURNING ?"
+		"WITH prefix AS $1 " +
+			"INSERT DELAYED IGNORE INTO a (b,c) VALUES ($2,$3),($4,$5 + 1) " +
+			"RETURNING $6"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{0, 1, 2, 3, 4, 5}
@@ -53,10 +53,7 @@ func TestInsertBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Insert("test").Values(1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Question).SQL()
-	assert.Equal(t, "INSERT INTO test VALUES (?,?)", sql)
-
-	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.PlaceholderFormat(Dollar).SQL()
 	assert.Equal(t, "INSERT INTO test VALUES ($1,$2)", sql)
 }
 
@@ -64,7 +61,7 @@ func TestInsertBuilderRunners(t *testing.T) {
 	t.Parallel()
 	b := Insert("test").Values(1)
 
-	expectedSQL := "INSERT INTO test VALUES (?)"
+	expectedSQL := "INSERT INTO test VALUES ($1)"
 
 	got, args := b.MustSQL()
 	assert.Equal(t, expectedSQL, got)
@@ -78,7 +75,7 @@ func TestInsertBuilderSetMap(t *testing.T) {
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
-	expectedSQL := "INSERT INTO table (field1,field2,field3) VALUES (?,?,?)"
+	expectedSQL := "INSERT INTO table (field1,field2,field3) VALUES ($1,$2,$3)"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1, 2, 3}
@@ -93,7 +90,7 @@ func TestInsertBuilderSelect(t *testing.T) {
 	sql, args, err := ib.SQL()
 	assert.NoError(t, err)
 
-	expectedSQL := "INSERT INTO table2 (field1) SELECT field1 FROM table1 WHERE field1 = ?"
+	expectedSQL := "INSERT INTO table2 (field1) SELECT field1 FROM table1 WHERE field1 = $1"
 	assert.Equal(t, expectedSQL, sql)
 
 	expectedArgs := []any{1}
@@ -104,7 +101,7 @@ func TestInsertBuilderReplace(t *testing.T) {
 	t.Parallel()
 	b := Replace("table").Values(1)
 
-	expectedSQL := "REPLACE INTO table VALUES (?)"
+	expectedSQL := "REPLACE INTO table VALUES ($1)"
 
 	sql, _, err := b.SQL()
 	assert.NoError(t, err)

@@ -31,11 +31,6 @@ func (b StatementBuilderType) Delete(from string) DeleteBuilder {
 	return DeleteBuilder(b).From(from)
 }
 
-// PlaceholderFormat sets the PlaceholderFormat field for any child builders.
-func (b StatementBuilderType) PlaceholderFormat(f PlaceholderFormat) StatementBuilderType {
-	return builder.Set(b, "PlaceholderFormat", f).(StatementBuilderType)
-}
-
 // Where adds WHERE expressions to the query.
 //
 // See SelectBuilder.Where for more information.
@@ -43,8 +38,13 @@ func (b StatementBuilderType) Where(pred any, args ...any) StatementBuilderType 
 	return builder.Append(b, "WhereParts", newWherePart(pred, args...)).(StatementBuilderType)
 }
 
+// PlaceholderFormat sets the PlaceholderFormat field for any child builders.
+func (b StatementBuilderType) PlaceholderFormat(f PlaceholderFormat) StatementBuilderType {
+	return builder.Set(b, "PlaceholderFormat", f).(StatementBuilderType)
+}
+
 // StatementBuilder is a parent builder for other builders, e.g. SelectBuilder.
-var StatementBuilder = StatementBuilderType(builder.EmptyBuilder).PlaceholderFormat(Question)
+var StatementBuilder = StatementBuilderType(builder.EmptyBuilder).PlaceholderFormat(Dollar)
 
 // Select returns a new SelectBuilder, optionally setting some result columns.
 //

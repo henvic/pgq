@@ -142,14 +142,6 @@ func init() {
 	builder.Register(SelectBuilder{}, selectData{})
 }
 
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b SelectBuilder) PlaceholderFormat(f PlaceholderFormat) SelectBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(SelectBuilder)
-}
-
 // SQL methods
 
 // SQL builds the query into a SQL string and bound args.
@@ -225,7 +217,8 @@ func (b SelectBuilder) From(from string) SelectBuilder {
 
 // FromSelect sets a subquery into the FROM clause of the query.
 func (b SelectBuilder) FromSelect(from SelectBuilder, alias string) SelectBuilder {
-	// Prevent misnumbered parameters in nested selects (#183).
+	// Prevent misnumbered parameters in nested selects
+	// See https://github.com/Masterminds/squirrel/issues/183
 	from = from.PlaceholderFormat(Question)
 	return builder.Set(b, "From", Alias(from, alias)).(SelectBuilder)
 }
@@ -341,4 +334,12 @@ func (b SelectBuilder) Suffix(sql string, args ...any) SelectBuilder {
 // SuffixExpr adds an expression to the end of the query
 func (b SelectBuilder) SuffixExpr(expr SQLizer) SelectBuilder {
 	return builder.Append(b, "Suffixes", expr).(SelectBuilder)
+}
+
+// Format methods
+
+// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
+// query.
+func (b SelectBuilder) PlaceholderFormat(f PlaceholderFormat) SelectBuilder {
+	return builder.Set(b, "PlaceholderFormat", f).(SelectBuilder)
 }

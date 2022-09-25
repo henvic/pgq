@@ -117,14 +117,6 @@ func init() {
 	builder.Register(UpdateBuilder{}, updateData{})
 }
 
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b UpdateBuilder) PlaceholderFormat(f PlaceholderFormat) UpdateBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(UpdateBuilder)
-}
-
 // SQL methods
 
 // SQL builds the query into a SQL string and bound args.
@@ -210,4 +202,12 @@ func (b UpdateBuilder) Suffix(sql string, args ...any) UpdateBuilder {
 // SuffixExpr adds an expression to the end of the query
 func (b UpdateBuilder) SuffixExpr(expr SQLizer) UpdateBuilder {
 	return builder.Append(b, "Suffixes", expr).(UpdateBuilder)
+}
+
+// Format methods
+
+// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
+// query.
+func (b UpdateBuilder) PlaceholderFormat(f PlaceholderFormat) UpdateBuilder {
+	return builder.Set(b, "PlaceholderFormat", f).(UpdateBuilder)
 }
