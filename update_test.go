@@ -63,6 +63,6 @@ func TestUpdateBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Update("test").SetMap(Eq{"x": 1, "y": 2})
 
-	sql, _, _ := b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.SQL()
 	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
 }

@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-// PlaceholderFormat is the interface that wraps the ReplacePlaceholders method.
+// placeholderFormat is the interface that wraps the ReplacePlaceholders method.
 //
 // ReplacePlaceholders takes a SQL statement and replaces each question mark
 // placeholder with a (possibly different) SQL placeholder.
-type PlaceholderFormat interface {
+type placeholderFormat interface {
 	ReplacePlaceholders(sql string) (string, error)
 }
 
@@ -19,13 +19,13 @@ type placeholderDebugger interface {
 }
 
 var (
-	// Question is a PlaceholderFormat instance that leaves placeholders as
+	// question is a PlaceholderFormat instance that leaves placeholders as
 	// question marks.
-	Question = questionFormat{}
+	question questionFormat
 
-	// Dollar is a PlaceholderFormat instance that replaces placeholders with
+	// dollar is a PlaceholderFormat instance that replaces placeholders with
 	// dollar-prefixed positional placeholders (e.g. $1, $2, $3).
-	Dollar = dollarFormat{}
+	dollar dollarFormat
 )
 
 type questionFormat struct{}
@@ -40,13 +40,10 @@ func (questionFormat) debugPlaceholder() string {
 
 type dollarFormat struct{}
 
-func (dollarFormat) ReplacePlaceholders(sql string) (string, error) {
-	return replacePositionalPlaceholders(sql, "$")
-}
-
 func (dollarFormat) debugPlaceholder() string {
 	return "$"
 }
+
 // Placeholders returns a string with count ? placeholders joined with commas.
 func Placeholders(count int) string {
 	if count < 1 {
@@ -56,7 +53,7 @@ func Placeholders(count int) string {
 	return strings.Repeat(",?", count)[1:]
 }
 
-func replacePositionalPlaceholders(sql, prefix string) (string, error) {
+func (dollarFormat) ReplacePlaceholders(sql string) (string, error) {
 	buf := &bytes.Buffer{}
 	i := 0
 	for {
@@ -75,7 +72,7 @@ func replacePositionalPlaceholders(sql, prefix string) (string, error) {
 		} else {
 			i++
 			buf.WriteString(sql[:p])
-			fmt.Fprintf(buf, "%s%d", prefix, i)
+			fmt.Fprintf(buf, "$%d", i)
 			sql = sql[p+1:]
 		}
 	}

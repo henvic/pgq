@@ -3,7 +3,7 @@ module github.com/henvic/pgq/integration
 go 1.18
 
 require (
-	github.com/henvic/pgq v1.1.0
+	github.com/henvic/pgq v0.0.1
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-sqlite3 v1.13.0

@@ -7,36 +7,35 @@ import (
 	"io"
 	"sort"
 	"strings"
-
-	"github.com/lann/builder"
 )
 
-type insertData struct {
-	PlaceholderFormat PlaceholderFormat
-	Prefixes          []SQLizer
-	StatementKeyword  string
-	Options           []string
-	Into              string
-	Columns           []string
-	Values            [][]any
-	Suffixes          []SQLizer
-	Select            *SelectBuilder
+// InsertBuilder builds SQL INSERT statements.
+type InsertBuilder struct {
+	prefixes      []SQLizer
+	replace       bool
+	options       []string
+	into          string
+	columns       []string
+	values        [][]any
+	suffixes      []SQLizer
+	selectBuilder *SelectBuilder
 }
 
-func (d *insertData) SQL() (sqlStr string, args []any, err error) {
-	if len(d.Into) == 0 {
+// SQL builds the query into a SQL string and bound args.
+func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
+	if len(b.into) == 0 {
 		err = errors.New("insert statements must specify a table")
 		return
 	}
-	if len(d.Values) == 0 && d.Select == nil {
+	if len(b.values) == 0 && b.selectBuilder == nil {
 		err = errors.New("insert statements must have at least one set of values or select clause")
 		return
 	}
 
 	sql := &bytes.Buffer{}
 
-	if len(d.Prefixes) > 0 {
-		args, err = appendSQL(d.Prefixes, sql, " ", args)
+	if len(b.prefixes) > 0 {
+		args, err = appendSQL(b.prefixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -44,58 +43,57 @@ func (d *insertData) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString(" ")
 	}
 
-	if d.StatementKeyword == "" {
+	if !b.replace {
 		sql.WriteString("INSERT ")
 	} else {
-		sql.WriteString(d.StatementKeyword)
-		sql.WriteString(" ")
+		sql.WriteString("REPLACE ")
 	}
 
-	if len(d.Options) > 0 {
-		sql.WriteString(strings.Join(d.Options, " "))
+	if len(b.options) > 0 {
+		sql.WriteString(strings.Join(b.options, " "))
 		sql.WriteString(" ")
 	}
 
 	sql.WriteString("INTO ")
-	sql.WriteString(d.Into)
+	sql.WriteString(b.into)
 	sql.WriteString(" ")
 
-	if len(d.Columns) > 0 {
+	if len(b.columns) > 0 {
 		sql.WriteString("(")
-		sql.WriteString(strings.Join(d.Columns, ","))
+		sql.WriteString(strings.Join(b.columns, ","))
 		sql.WriteString(") ")
 	}
 
-	if d.Select != nil {
-		args, err = d.appendSelectToSQL(sql, args)
+	if b.selectBuilder != nil {
+		args, err = b.appendSelectToSQL(sql, args)
 	} else {
-		args, err = d.appendValuesToSQL(sql, args)
+		args, err = b.appendValuesToSQL(sql, args)
 	}
 	if err != nil {
 		return
 	}
 
-	if len(d.Suffixes) > 0 {
+	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
-		args, err = appendSQL(d.Suffixes, sql, " ", args)
+		args, err = appendSQL(b.suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	sqlStr, err = d.PlaceholderFormat.ReplacePlaceholders(sql.String())
+	sqlStr, err = dollar.ReplacePlaceholders(sql.String())
 	return
 }
 
-func (d *insertData) appendValuesToSQL(w io.Writer, args []any) ([]any, error) {
-	if len(d.Values) == 0 {
+func (b InsertBuilder) appendValuesToSQL(w io.Writer, args []any) ([]any, error) {
+	if len(b.values) == 0 {
 		return args, errors.New("values for insert statements are not set")
 	}
 
 	io.WriteString(w, "VALUES ")
 
-	valuesStrings := make([]string, len(d.Values))
-	for r, row := range d.Values {
+	valuesStrings := make([]string, len(b.values))
+	for r, row := range b.values {
 		valueStrings := make([]string, len(row))
 		for v, val := range row {
 			if vs, ok := val.(SQLizer); ok {
@@ -118,12 +116,12 @@ func (d *insertData) appendValuesToSQL(w io.Writer, args []any) ([]any, error) {
 	return args, nil
 }
 
-func (d *insertData) appendSelectToSQL(w io.Writer, args []any) ([]any, error) {
-	if d.Select == nil {
+func (b InsertBuilder) appendSelectToSQL(w io.Writer, args []any) ([]any, error) {
+	if b.selectBuilder == nil {
 		return args, errors.New("select clause for insert statements are not set")
 	}
 
-	selectClause, sArgs, err := d.Select.SQL()
+	selectClause, sArgs, err := b.selectBuilder.SQL()
 	if err != nil {
 		return args, err
 	}
@@ -132,23 +130,6 @@ func (d *insertData) appendSelectToSQL(w io.Writer, args []any) ([]any, error) {
 	args = append(args, sArgs...)
 
 	return args, nil
-}
-
-// Builder
-
-// InsertBuilder builds SQL INSERT statements.
-type InsertBuilder builder.Builder
-
-func init() {
-	builder.Register(InsertBuilder{}, insertData{})
-}
-
-// SQL methods
-
-// SQL builds the query into a SQL string and bound args.
-func (b InsertBuilder) SQL() (string, []any, error) {
-	data := builder.GetStruct(b).(insertData)
-	return data.SQL()
 }
 
 // MustSQL builds the query into a SQL string and bound args.
@@ -168,27 +149,32 @@ func (b InsertBuilder) Prefix(sql string, args ...any) InsertBuilder {
 
 // PrefixExpr adds an expression to the very beginning of the query
 func (b InsertBuilder) PrefixExpr(expr SQLizer) InsertBuilder {
-	return builder.Append(b, "Prefixes", expr).(InsertBuilder)
+	b.prefixes = append(b.prefixes, expr)
+	return b
 }
 
 // Options adds keyword options before the INTO clause of the query.
 func (b InsertBuilder) Options(options ...string) InsertBuilder {
-	return builder.Extend(b, "Options", options).(InsertBuilder)
+	b.options = append(b.options, options...)
+	return b
 }
 
 // Into sets the INTO clause of the query.
 func (b InsertBuilder) Into(from string) InsertBuilder {
-	return builder.Set(b, "Into", from).(InsertBuilder)
+	b.into = from
+	return b
 }
 
 // Columns adds insert columns to the query.
 func (b InsertBuilder) Columns(columns ...string) InsertBuilder {
-	return builder.Extend(b, "Columns", columns).(InsertBuilder)
+	b.columns = append(b.columns, columns...)
+	return b
 }
 
 // Values adds a single row's values to the query.
 func (b InsertBuilder) Values(values ...any) InsertBuilder {
-	return builder.Append(b, "Values", values).(InsertBuilder)
+	b.values = append(b.values, values)
+	return b
 }
 
 // Suffix adds an expression to the end of the query
@@ -198,7 +184,8 @@ func (b InsertBuilder) Suffix(sql string, args ...any) InsertBuilder {
 
 // SuffixExpr adds an expression to the end of the query
 func (b InsertBuilder) SuffixExpr(expr SQLizer) InsertBuilder {
-	return builder.Append(b, "Suffixes", expr).(InsertBuilder)
+	b.suffixes = append(b.suffixes, expr)
+	return b
 }
 
 // SetMap set columns and values for insert builder from a map of column name and value
@@ -216,26 +203,14 @@ func (b InsertBuilder) SetMap(clauses map[string]any) InsertBuilder {
 		vals = append(vals, clauses[col])
 	}
 
-	b = builder.Set(b, "Columns", cols).(InsertBuilder)
-	b = builder.Set(b, "Values", [][]any{vals}).(InsertBuilder)
-
+	b.columns = cols
+	b.values = [][]any{vals}
 	return b
 }
 
 // Select set Select clause for insert query
 // If Values and Select are used, then Select has higher priority
 func (b InsertBuilder) Select(sb SelectBuilder) InsertBuilder {
-	return builder.Set(b, "Select", &sb).(InsertBuilder)
-}
-
-func (b InsertBuilder) statementKeyword(keyword string) InsertBuilder {
-	return builder.Set(b, "StatementKeyword", keyword).(InsertBuilder)
-}
-
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b InsertBuilder) PlaceholderFormat(f PlaceholderFormat) InsertBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(InsertBuilder)
+	b.selectBuilder = &sb
+	return b
 }

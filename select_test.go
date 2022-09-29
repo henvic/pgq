@@ -76,12 +76,10 @@ func TestSelectBuilderFromSelectNestedDollarPlaceholders(t *testing.T) {
 	t.Parallel()
 	subQ := Select("c").
 		From("t").
-		Where(Gt{"c": 1}).
-		PlaceholderFormat(Dollar)
+		Where(Gt{"c": 1})
 	b := Select("c").
 		FromSelect(subQ, "subq").
-		Where(Lt{"c": 2}).
-		PlaceholderFormat(Dollar)
+		Where(Lt{"c": 2})
 	sql, args, err := b.SQL()
 	assert.NoError(t, err)
 
@@ -102,10 +100,7 @@ func TestSelectBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Select("test").Where("x = ? AND y = ?")
 
-	sql, _, _ := b.PlaceholderFormat(Question).SQL()
-	assert.Equal(t, "SELECT test WHERE x = ? AND y = ?", sql)
-
-	sql, _, _ = b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.SQL()
 	assert.Equal(t, "SELECT test WHERE x = $1 AND y = $2", sql)
 }
 
@@ -179,9 +174,9 @@ func TestSelectWithRemoveOffset(t *testing.T) {
 
 func TestSelectBuilderNestedSelectDollar(t *testing.T) {
 	t.Parallel()
-	nestedBuilder := StatementBuilder.PlaceholderFormat(Dollar).Select("*").Prefix("NOT EXISTS (").
+	nestedBuilder := Select("*").Prefix("NOT EXISTS (").
 		From("bar").Where("y = ?", 42).Suffix(")")
-	outerSQL, _, err := StatementBuilder.PlaceholderFormat(Dollar).Select("*").
+	outerSQL, _, err := Select("*").
 		From("foo").Where("x = ?").Where(nestedBuilder).SQL()
 
 	assert.NoError(t, err)
@@ -222,14 +217,13 @@ func TestSelectWithEmptyStringWhereClause(t *testing.T) {
 
 func TestSelectSubqueryPlaceholderNumbering(t *testing.T) {
 	t.Parallel()
-	subquery := Select("a").Where("b = ?", 1).PlaceholderFormat(Dollar)
+	subquery := Select("a").Where("b = ?", 1)
 	with := subquery.Prefix("WITH a AS (").Suffix(")")
 
 	sql, args, err := Select("*").
 		PrefixExpr(with).
 		FromSelect(subquery, "q").
 		Where("c = ?", 2).
-		PlaceholderFormat(Dollar).
 		SQL()
 	assert.NoError(t, err)
 
@@ -240,12 +234,11 @@ func TestSelectSubqueryPlaceholderNumbering(t *testing.T) {
 
 func TestSelectSubqueryInConjunctionPlaceholderNumbering(t *testing.T) {
 	t.Parallel()
-	subquery := Select("a").Where(Eq{"b": 1}).Prefix("EXISTS(").Suffix(")").PlaceholderFormat(Dollar)
+	subquery := Select("a").Where(Eq{"b": 1}).Prefix("EXISTS(").Suffix(")")
 
 	sql, args, err := Select("*").
 		Where(Or{subquery}).
 		Where("c = ?", 2).
-		PlaceholderFormat(Dollar).
 		SQL()
 	assert.NoError(t, err)
 
@@ -256,13 +249,12 @@ func TestSelectSubqueryInConjunctionPlaceholderNumbering(t *testing.T) {
 
 func TestSelectJoinClausePlaceholderNumbering(t *testing.T) {
 	t.Parallel()
-	subquery := Select("a").Where(Eq{"b": 2}).PlaceholderFormat(Dollar)
+	subquery := Select("a").Where(Eq{"b": 2})
 
 	sql, args, err := Select("t1.a").
 		From("t1").
 		Where(Eq{"a": 1}).
 		JoinClause(subquery.Prefix("JOIN (").Suffix(") t2 ON (t1.a = t2.a)")).
-		PlaceholderFormat(Dollar).
 		SQL()
 	assert.NoError(t, err)
 

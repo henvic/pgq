@@ -4,31 +4,30 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
-
-	"github.com/lann/builder"
 )
 
-type deleteData struct {
-	PlaceholderFormat PlaceholderFormat
-	Prefixes          []SQLizer
-	From              string
-	WhereParts        []SQLizer
-	OrderBys          []string
-	Limit             string
-	Offset            string
-	Suffixes          []SQLizer
+// DeleteBuilder builds SQL DELETE statements.
+type DeleteBuilder struct {
+	prefixes   []SQLizer
+	from       string
+	whereParts []SQLizer
+	orderBys   []string
+	limit      string
+	offset     string
+	suffixes   []SQLizer
 }
 
-func (d *deleteData) SQL() (sqlStr string, args []any, err error) {
-	if len(d.From) == 0 {
+// SQL builds the query into a SQL string and bound args.
+func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
+	if len(b.from) == 0 {
 		err = fmt.Errorf("delete statements must specify a From table")
 		return
 	}
 
 	sql := &bytes.Buffer{}
 
-	if len(d.Prefixes) > 0 {
-		args, err = appendSQL(d.Prefixes, sql, " ", args)
+	if len(b.prefixes) > 0 {
+		args, err = appendSQL(b.prefixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -37,58 +36,41 @@ func (d *deleteData) SQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql.WriteString("DELETE FROM ")
-	sql.WriteString(d.From)
+	sql.WriteString(b.from)
 
-	if len(d.WhereParts) > 0 {
+	if len(b.whereParts) > 0 {
 		sql.WriteString(" WHERE ")
-		args, err = appendSQL(d.WhereParts, sql, " AND ", args)
+		args, err = appendSQL(b.whereParts, sql, " AND ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.OrderBys) > 0 {
+	if len(b.orderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
-		sql.WriteString(strings.Join(d.OrderBys, ", "))
+		sql.WriteString(strings.Join(b.orderBys, ", "))
 	}
 
-	if len(d.Limit) > 0 {
+	if len(b.limit) > 0 {
 		sql.WriteString(" LIMIT ")
-		sql.WriteString(d.Limit)
+		sql.WriteString(b.limit)
 	}
 
-	if len(d.Offset) > 0 {
+	if len(b.offset) > 0 {
 		sql.WriteString(" OFFSET ")
-		sql.WriteString(d.Offset)
+		sql.WriteString(b.offset)
 	}
 
-	if len(d.Suffixes) > 0 {
+	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
-		args, err = appendSQL(d.Suffixes, sql, " ", args)
+		args, err = appendSQL(b.suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	sqlStr, err = d.PlaceholderFormat.ReplacePlaceholders(sql.String())
+	sqlStr, err = dollar.ReplacePlaceholders(sql.String())
 	return
-}
-
-// Builder
-
-// DeleteBuilder builds SQL DELETE statements.
-type DeleteBuilder builder.Builder
-
-func init() {
-	builder.Register(DeleteBuilder{}, deleteData{})
-}
-
-// SQL methods
-
-// SQL builds the query into a SQL string and bound args.
-func (b DeleteBuilder) SQL() (string, []any, error) {
-	data := builder.GetStruct(b).(deleteData)
-	return data.SQL()
 }
 
 // MustSQL builds the query into a SQL string and bound args.
@@ -108,34 +90,40 @@ func (b DeleteBuilder) Prefix(sql string, args ...any) DeleteBuilder {
 
 // PrefixExpr adds an expression to the very beginning of the query
 func (b DeleteBuilder) PrefixExpr(expr SQLizer) DeleteBuilder {
-	return builder.Append(b, "Prefixes", expr).(DeleteBuilder)
+	b.prefixes = append(b.prefixes, expr)
+	return b
 }
 
 // From sets the table to be deleted from.
 func (b DeleteBuilder) From(from string) DeleteBuilder {
-	return builder.Set(b, "From", from).(DeleteBuilder)
+	b.from = from
+	return b
 }
 
 // Where adds WHERE expressions to the query.
 //
 // See SelectBuilder.Where for more information.
 func (b DeleteBuilder) Where(pred any, args ...any) DeleteBuilder {
-	return builder.Append(b, "WhereParts", newWherePart(pred, args...)).(DeleteBuilder)
+	b.whereParts = append(b.whereParts, newWherePart(pred, args...))
+	return b
 }
 
 // OrderBy adds ORDER BY expressions to the query.
 func (b DeleteBuilder) OrderBy(orderBys ...string) DeleteBuilder {
-	return builder.Extend(b, "OrderBys", orderBys).(DeleteBuilder)
+	b.orderBys = append(b.orderBys, orderBys...)
+	return b
 }
 
 // Limit sets a LIMIT clause on the query.
 func (b DeleteBuilder) Limit(limit uint64) DeleteBuilder {
-	return builder.Set(b, "Limit", fmt.Sprintf("%d", limit)).(DeleteBuilder)
+	b.limit = fmt.Sprintf("%d", limit)
+	return b
 }
 
 // Offset sets a OFFSET clause on the query.
 func (b DeleteBuilder) Offset(offset uint64) DeleteBuilder {
-	return builder.Set(b, "Offset", fmt.Sprintf("%d", offset)).(DeleteBuilder)
+	b.offset = fmt.Sprintf("%d", offset)
+	return b
 }
 
 // Suffix adds an expression to the end of the query
@@ -145,13 +133,6 @@ func (b DeleteBuilder) Suffix(sql string, args ...any) DeleteBuilder {
 
 // SuffixExpr adds an expression to the end of the query
 func (b DeleteBuilder) SuffixExpr(expr SQLizer) DeleteBuilder {
-	return builder.Append(b, "Suffixes", expr).(DeleteBuilder)
-}
-
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b DeleteBuilder) PlaceholderFormat(f PlaceholderFormat) DeleteBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(DeleteBuilder)
+	b.suffixes = append(b.suffixes, expr)
+	return b
 }

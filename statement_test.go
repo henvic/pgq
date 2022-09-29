@@ -8,7 +8,7 @@ import (
 
 func TestStatementBuilderWhere(t *testing.T) {
 	t.Parallel()
-	sb := StatementBuilder.Where("x = ?", 1)
+	sb := Statement().Where("x = ?", 1)
 
 	sql, args, err := sb.Select("test").Where("y = ?", 2).SQL()
 	assert.NoError(t, err)

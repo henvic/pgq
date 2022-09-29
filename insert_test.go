@@ -53,7 +53,7 @@ func TestInsertBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Insert("test").Values(1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.SQL()
 	assert.Equal(t, "INSERT INTO test VALUES ($1,$2)", sql)
 }
 

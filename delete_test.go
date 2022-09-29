@@ -46,11 +46,11 @@ func TestDeleteBuilderMustSQL(t *testing.T) {
 	Delete("").MustSQL()
 }
 
-func TestDeleteBuilderPlaceholders(t *testing.T) {
+func TestDeleteBuilder(t *testing.T) {
 	t.Parallel()
 	b := Delete("test").Where("x = ? AND y = ?", 1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Dollar).SQL()
+	sql, _, _ := b.SQL()
 	assert.Equal(t, "DELETE FROM test WHERE x = $1 AND y = $2", sql)
 }
 

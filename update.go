@@ -5,20 +5,18 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/lann/builder"
 )
 
-type updateData struct {
-	PlaceholderFormat PlaceholderFormat
-	Prefixes          []SQLizer
-	Table             string
-	SetClauses        []setClause
-	WhereParts        []SQLizer
-	OrderBys          []string
-	Limit             string
-	Offset            string
-	Suffixes          []SQLizer
+// UpdateBuilder builds SQL UPDATE statements.
+type UpdateBuilder struct {
+	prefixes   []SQLizer
+	table      string
+	setClauses []setClause
+	whereParts []SQLizer
+	orderBys   []string
+	limit      string
+	offset     string
+	Suffixes   []SQLizer
 }
 
 type setClause struct {
@@ -26,20 +24,20 @@ type setClause struct {
 	value  any
 }
 
-func (d *updateData) SQL() (sqlStr string, args []any, err error) {
-	if len(d.Table) == 0 {
+func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
+	if len(b.table) == 0 {
 		err = fmt.Errorf("update statements must specify a table")
 		return
 	}
-	if len(d.SetClauses) == 0 {
+	if len(b.setClauses) == 0 {
 		err = fmt.Errorf("update statements must have at least one Set clause")
 		return
 	}
 
 	sql := &bytes.Buffer{}
 
-	if len(d.Prefixes) > 0 {
-		args, err = appendSQL(d.Prefixes, sql, " ", args)
+	if len(b.prefixes) > 0 {
+		args, err = appendSQL(b.prefixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -48,11 +46,11 @@ func (d *updateData) SQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql.WriteString("UPDATE ")
-	sql.WriteString(d.Table)
+	sql.WriteString(b.table)
 
 	sql.WriteString(" SET ")
-	setSQLs := make([]string, len(d.SetClauses))
-	for i, setClause := range d.SetClauses {
+	setSQLs := make([]string, len(b.setClauses))
+	for i, setClause := range b.setClauses {
 		var valSQL string
 		if vs, ok := setClause.value.(SQLizer); ok {
 			vsql, vargs, err := vs.SQL()
@@ -73,56 +71,39 @@ func (d *updateData) SQL() (sqlStr string, args []any, err error) {
 	}
 	sql.WriteString(strings.Join(setSQLs, ", "))
 
-	if len(d.WhereParts) > 0 {
+	if len(b.whereParts) > 0 {
 		sql.WriteString(" WHERE ")
-		args, err = appendSQL(d.WhereParts, sql, " AND ", args)
+		args, err = appendSQL(b.whereParts, sql, " AND ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.OrderBys) > 0 {
+	if len(b.orderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
-		sql.WriteString(strings.Join(d.OrderBys, ", "))
+		sql.WriteString(strings.Join(b.orderBys, ", "))
 	}
 
-	if len(d.Limit) > 0 {
+	if len(b.limit) > 0 {
 		sql.WriteString(" LIMIT ")
-		sql.WriteString(d.Limit)
+		sql.WriteString(b.limit)
 	}
 
-	if len(d.Offset) > 0 {
+	if len(b.offset) > 0 {
 		sql.WriteString(" OFFSET ")
-		sql.WriteString(d.Offset)
+		sql.WriteString(b.offset)
 	}
 
-	if len(d.Suffixes) > 0 {
+	if len(b.Suffixes) > 0 {
 		sql.WriteString(" ")
-		args, err = appendSQL(d.Suffixes, sql, " ", args)
+		args, err = appendSQL(b.Suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	sqlStr, err = d.PlaceholderFormat.ReplacePlaceholders(sql.String())
+	sqlStr, err = dollar.ReplacePlaceholders(sql.String())
 	return
-}
-
-// Builder
-
-// UpdateBuilder builds SQL UPDATE statements.
-type UpdateBuilder builder.Builder
-
-func init() {
-	builder.Register(UpdateBuilder{}, updateData{})
-}
-
-// SQL methods
-
-// SQL builds the query into a SQL string and bound args.
-func (b UpdateBuilder) SQL() (string, []any, error) {
-	data := builder.GetStruct(b).(updateData)
-	return data.SQL()
 }
 
 // MustSQL builds the query into a SQL string and bound args.
@@ -142,17 +123,20 @@ func (b UpdateBuilder) Prefix(sql string, args ...any) UpdateBuilder {
 
 // PrefixExpr adds an expression to the very beginning of the query
 func (b UpdateBuilder) PrefixExpr(expr SQLizer) UpdateBuilder {
-	return builder.Append(b, "Prefixes", expr).(UpdateBuilder)
+	b.prefixes = append(b.prefixes, expr)
+	return b
 }
 
 // Table sets the table to be updated.
 func (b UpdateBuilder) Table(table string) UpdateBuilder {
-	return builder.Set(b, "Table", table).(UpdateBuilder)
+	b.table = table
+	return b
 }
 
 // Set adds SET clauses to the query.
 func (b UpdateBuilder) Set(column string, value any) UpdateBuilder {
-	return builder.Append(b, "SetClauses", setClause{column: column, value: value}).(UpdateBuilder)
+	b.setClauses = append(b.setClauses, setClause{column: column, value: value})
+	return b
 }
 
 // SetMap is a convenience method which calls .Set for each key/value pair in clauses.
@@ -176,22 +160,26 @@ func (b UpdateBuilder) SetMap(clauses map[string]any) UpdateBuilder {
 //
 // See SelectBuilder.Where for more information.
 func (b UpdateBuilder) Where(pred any, args ...any) UpdateBuilder {
-	return builder.Append(b, "WhereParts", newWherePart(pred, args...)).(UpdateBuilder)
+	b.whereParts = append(b.whereParts, newWherePart(pred, args...))
+	return b
 }
 
 // OrderBy adds ORDER BY expressions to the query.
 func (b UpdateBuilder) OrderBy(orderBys ...string) UpdateBuilder {
-	return builder.Extend(b, "OrderBys", orderBys).(UpdateBuilder)
+	b.orderBys = append(b.orderBys, orderBys...)
+	return b
 }
 
 // Limit sets a LIMIT clause on the query.
 func (b UpdateBuilder) Limit(limit uint64) UpdateBuilder {
-	return builder.Set(b, "Limit", fmt.Sprintf("%d", limit)).(UpdateBuilder)
+	b.limit = fmt.Sprintf("%d", limit)
+	return b
 }
 
 // Offset sets a OFFSET clause on the query.
 func (b UpdateBuilder) Offset(offset uint64) UpdateBuilder {
-	return builder.Set(b, "Offset", fmt.Sprintf("%d", offset)).(UpdateBuilder)
+	b.offset = fmt.Sprintf("%d", offset)
+	return b
 }
 
 // Suffix adds an expression to the end of the query
@@ -201,13 +189,6 @@ func (b UpdateBuilder) Suffix(sql string, args ...any) UpdateBuilder {
 
 // SuffixExpr adds an expression to the end of the query
 func (b UpdateBuilder) SuffixExpr(expr SQLizer) UpdateBuilder {
-	return builder.Append(b, "Suffixes", expr).(UpdateBuilder)
-}
-
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b UpdateBuilder) PlaceholderFormat(f PlaceholderFormat) UpdateBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(UpdateBuilder)
+	b.Suffixes = append(b.Suffixes, expr)
+	return b
 }

@@ -3,13 +3,7 @@ package pgq
 import (
 	"bytes"
 	"errors"
-
-	"github.com/lann/builder"
 )
-
-func init() {
-	builder.Register(CaseBuilder{}, caseData{})
-}
 
 // sqlizerBuffer is a helper that allows to write many SQLizers one by one
 // without constant checks for errors that may come from SQLizer
@@ -52,16 +46,16 @@ func newWhenPart(when any, then any) whenPart {
 	return whenPart{newPart(when), newPart(then)}
 }
 
-// caseData holds all the data required to build a CASE SQL construct
-type caseData struct {
-	What      SQLizer
-	WhenParts []whenPart
-	Else      SQLizer
+// CaseBuilder builds SQL CASE construct which could be used as parts of queries.
+type CaseBuilder struct {
+	whatParts SQLizer
+	whenParts []whenPart
+	elseParts SQLizer
 }
 
-// SQL implements SQLizer
-func (d *caseData) SQL() (sqlStr string, args []any, err error) {
-	if len(d.WhenParts) == 0 {
+// SQL builds the query into a SQL string and bound args.
+func (b CaseBuilder) SQL() (sqlStr string, args []any, err error) {
+	if len(b.whenParts) == 0 {
 		err = errors.New("case expression must contain at lease one WHEN clause")
 
 		return
@@ -70,34 +64,25 @@ func (d *caseData) SQL() (sqlStr string, args []any, err error) {
 	sql := sqlizerBuffer{}
 
 	sql.WriteString("CASE ")
-	if d.What != nil {
-		sql.WriteSQL(d.What)
+	if b.whatParts != nil {
+		sql.WriteSQL(b.whatParts)
 	}
 
-	for _, p := range d.WhenParts {
+	for _, p := range b.whenParts {
 		sql.WriteString("WHEN ")
 		sql.WriteSQL(p.when)
 		sql.WriteString("THEN ")
 		sql.WriteSQL(p.then)
 	}
 
-	if d.Else != nil {
+	if b.elseParts != nil {
 		sql.WriteString("ELSE ")
-		sql.WriteSQL(d.Else)
+		sql.WriteSQL(b.elseParts)
 	}
 
 	sql.WriteString("END")
 
 	return sql.SQL()
-}
-
-// CaseBuilder builds SQL CASE construct which could be used as parts of queries.
-type CaseBuilder builder.Builder
-
-// SQL builds the query into a SQL string and bound args.
-func (b CaseBuilder) SQL() (string, []any, error) {
-	data := builder.GetStruct(b).(caseData)
-	return data.SQL()
 }
 
 // MustSQL builds the query into a SQL string and bound args.
@@ -112,17 +97,20 @@ func (b CaseBuilder) MustSQL() (string, []any) {
 
 // what sets optional value for CASE construct "CASE [value] ..."
 func (b CaseBuilder) what(expr any) CaseBuilder {
-	return builder.Set(b, "What", newPart(expr)).(CaseBuilder)
+	b.whatParts = newPart(expr)
+	return b
 }
 
 // When adds "WHEN ... THEN ..." part to CASE construct
 func (b CaseBuilder) When(when any, then any) CaseBuilder {
 	// TODO: performance hint: replace slice of WhenPart with just slice of parts
 	// where even indices of the slice belong to "when"s and odd indices belong to "then"s
-	return builder.Append(b, "WhenParts", newWhenPart(when, then)).(CaseBuilder)
+	b.whenParts = append(b.whenParts, newWhenPart(when, then))
+	return b
 }
 
 // What sets optional "ELSE ..." part for CASE construct
 func (b CaseBuilder) Else(expr any) CaseBuilder {
-	return builder.Set(b, "Else", newPart(expr)).(CaseBuilder)
+	b.elseParts = newPart(expr)
+	return b
 }

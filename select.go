@@ -4,46 +4,50 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
-
-	"github.com/lann/builder"
 )
 
-type selectData struct {
-	PlaceholderFormat PlaceholderFormat
-	Prefixes          []SQLizer
-	Options           []string
-	Columns           []SQLizer
-	From              SQLizer
-	Joins             []SQLizer
-	WhereParts        []SQLizer
-	GroupBys          []string
-	HavingParts       []SQLizer
-	OrderByParts      []SQLizer
-	Limit             string
-	Offset            string
-	Suffixes          []SQLizer
+// SelectBuilder builds SQL SELECT statements.
+type SelectBuilder struct {
+	placeholderFormat placeholderFormat
+	prefixes          []SQLizer
+	options           []string
+	columns           []SQLizer
+	from              SQLizer
+	joins             []SQLizer
+	whereParts        []SQLizer
+	groupBys          []string
+	havingParts       []SQLizer
+	orderByParts      []SQLizer
+	limit             string
+	offset            string
+	suffixes          []SQLizer
 }
 
-func (d *selectData) SQL() (sqlStr string, args []any, err error) {
-	sqlStr, args, err = d.unfinalizedSQL()
+// SQL builds the query into a SQL string and bound args.
+func (b SelectBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = b.unfinalizedSQL()
 	if err != nil {
 		return
 	}
 
-	sqlStr, err = d.PlaceholderFormat.ReplacePlaceholders(sqlStr)
+	f := b.placeholderFormat
+	if f == nil {
+		f = dollar
+	}
+	sqlStr, err = f.ReplacePlaceholders(sqlStr)
 	return
 }
 
-func (d *selectData) unfinalizedSQL() (sqlStr string, args []any, err error) {
-	if len(d.Columns) == 0 {
+func (b SelectBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
+	if len(b.columns) == 0 {
 		err = fmt.Errorf("select statements must have at least one result column")
 		return
 	}
 
 	sql := &bytes.Buffer{}
 
-	if len(d.Prefixes) > 0 {
-		args, err = appendSQL(d.Prefixes, sql, " ", args)
+	if len(b.prefixes) > 0 {
+		args, err = appendSQL(b.prefixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -53,77 +57,77 @@ func (d *selectData) unfinalizedSQL() (sqlStr string, args []any, err error) {
 
 	sql.WriteString("SELECT ")
 
-	if len(d.Options) > 0 {
-		sql.WriteString(strings.Join(d.Options, " "))
+	if len(b.options) > 0 {
+		sql.WriteString(strings.Join(b.options, " "))
 		sql.WriteString(" ")
 	}
 
-	if len(d.Columns) > 0 {
-		args, err = appendSQL(d.Columns, sql, ", ", args)
+	if len(b.columns) > 0 {
+		args, err = appendSQL(b.columns, sql, ", ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if d.From != nil {
+	if b.from != nil {
 		sql.WriteString(" FROM ")
-		args, err = appendSQL([]SQLizer{d.From}, sql, "", args)
+		args, err = appendSQL([]SQLizer{b.from}, sql, "", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.Joins) > 0 {
+	if len(b.joins) > 0 {
 		sql.WriteString(" ")
-		args, err = appendSQL(d.Joins, sql, " ", args)
+		args, err = appendSQL(b.joins, sql, " ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.WhereParts) > 0 {
+	if len(b.whereParts) > 0 {
 		sql.WriteString(" WHERE ")
-		args, err = appendSQL(d.WhereParts, sql, " AND ", args)
+		args, err = appendSQL(b.whereParts, sql, " AND ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.GroupBys) > 0 {
+	if len(b.groupBys) > 0 {
 		sql.WriteString(" GROUP BY ")
-		sql.WriteString(strings.Join(d.GroupBys, ", "))
+		sql.WriteString(strings.Join(b.groupBys, ", "))
 	}
 
-	if len(d.HavingParts) > 0 {
+	if len(b.havingParts) > 0 {
 		sql.WriteString(" HAVING ")
-		args, err = appendSQL(d.HavingParts, sql, " AND ", args)
+		args, err = appendSQL(b.havingParts, sql, " AND ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.OrderByParts) > 0 {
+	if len(b.orderByParts) > 0 {
 		sql.WriteString(" ORDER BY ")
-		args, err = appendSQL(d.OrderByParts, sql, ", ", args)
+		args, err = appendSQL(b.orderByParts, sql, ", ", args)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(d.Limit) > 0 {
+	if len(b.limit) > 0 {
 		sql.WriteString(" LIMIT ")
-		sql.WriteString(d.Limit)
+		sql.WriteString(b.limit)
 	}
 
-	if len(d.Offset) > 0 {
+	if len(b.offset) > 0 {
 		sql.WriteString(" OFFSET ")
-		sql.WriteString(d.Offset)
+		sql.WriteString(b.offset)
 	}
 
-	if len(d.Suffixes) > 0 {
+	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
 
-		args, err = appendSQL(d.Suffixes, sql, " ", args)
+		args, err = appendSQL(b.suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -131,28 +135,6 @@ func (d *selectData) unfinalizedSQL() (sqlStr string, args []any, err error) {
 
 	sqlStr = sql.String()
 	return
-}
-
-// Builder
-
-// SelectBuilder builds SQL SELECT statements.
-type SelectBuilder builder.Builder
-
-func init() {
-	builder.Register(SelectBuilder{}, selectData{})
-}
-
-// SQL methods
-
-// SQL builds the query into a SQL string and bound args.
-func (b SelectBuilder) SQL() (string, []any, error) {
-	data := builder.GetStruct(b).(selectData)
-	return data.SQL()
-}
-
-func (b SelectBuilder) unfinalizedSQL() (string, []any, error) {
-	data := builder.GetStruct(b).(selectData)
-	return data.unfinalizedSQL()
 }
 
 // MustSQL builds the query into a SQL string and bound args.
@@ -172,7 +154,8 @@ func (b SelectBuilder) Prefix(sql string, args ...any) SelectBuilder {
 
 // PrefixExpr adds an expression to the very beginning of the query
 func (b SelectBuilder) PrefixExpr(expr SQLizer) SelectBuilder {
-	return builder.Append(b, "Prefixes", expr).(SelectBuilder)
+	b.prefixes = append(b.prefixes, expr)
+	return b
 }
 
 // Distinct adds a DISTINCT clause to the query.
@@ -182,23 +165,26 @@ func (b SelectBuilder) Distinct() SelectBuilder {
 
 // Options adds select option to the query
 func (b SelectBuilder) Options(options ...string) SelectBuilder {
-	return builder.Extend(b, "Options", options).(SelectBuilder)
+	b.options = append(b.options, options...)
+	return b
 }
 
 // Columns adds result columns to the query.
 func (b SelectBuilder) Columns(columns ...string) SelectBuilder {
-	parts := make([]any, 0, len(columns))
+	parts := make([]SQLizer, 0, len(columns))
 	for _, str := range columns {
 		parts = append(parts, newPart(str))
 	}
-	return builder.Extend(b, "Columns", parts).(SelectBuilder)
+	b.columns = append(b.columns, parts...)
+	return b
 }
 
 // RemoveColumns remove all columns from query.
 // Must add a new column with Column or Columns methods, otherwise
 // return a error.
 func (b SelectBuilder) RemoveColumns() SelectBuilder {
-	return builder.Delete(b, "Columns").(SelectBuilder)
+	b.columns = nil
+	return b
 }
 
 // Column adds a result column to the query.
@@ -207,25 +193,29 @@ func (b SelectBuilder) RemoveColumns() SelectBuilder {
 //
 //	Column("IF(col IN ("+squirrel.Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b SelectBuilder) Column(column any, args ...any) SelectBuilder {
-	return builder.Append(b, "Columns", newPart(column, args...)).(SelectBuilder)
+	b.columns = append(b.columns, newPart(column, args...))
+	return b
 }
 
 // From sets the FROM clause of the query.
 func (b SelectBuilder) From(from string) SelectBuilder {
-	return builder.Set(b, "From", newPart(from)).(SelectBuilder)
+	b.from = newPart(from)
+	return b
 }
 
 // FromSelect sets a subquery into the FROM clause of the query.
 func (b SelectBuilder) FromSelect(from SelectBuilder, alias string) SelectBuilder {
 	// Prevent misnumbered parameters in nested selects
 	// See https://github.com/Masterminds/squirrel/issues/183
-	from = from.PlaceholderFormat(Question)
-	return builder.Set(b, "From", Alias(from, alias)).(SelectBuilder)
+	from.placeholderFormat = question
+	b.from = Alias(from, alias)
+	return b
 }
 
 // JoinClause adds a join clause to the query.
 func (b SelectBuilder) JoinClause(pred any, args ...any) SelectBuilder {
-	return builder.Append(b, "Joins", newPart(pred, args...)).(SelectBuilder)
+	b.joins = append(b.joins, newPart(pred, args...))
+	return b
 }
 
 // Join adds a JOIN clause to the query.
@@ -277,24 +267,28 @@ func (b SelectBuilder) Where(pred any, args ...any) SelectBuilder {
 	if pred == nil || pred == "" {
 		return b
 	}
-	return builder.Append(b, "WhereParts", newWherePart(pred, args...)).(SelectBuilder)
+	b.whereParts = append(b.whereParts, newWherePart(pred, args...))
+	return b
 }
 
 // GroupBy adds GROUP BY expressions to the query.
 func (b SelectBuilder) GroupBy(groupBys ...string) SelectBuilder {
-	return builder.Extend(b, "GroupBys", groupBys).(SelectBuilder)
+	b.groupBys = append(b.groupBys, groupBys...)
+	return b
 }
 
 // Having adds an expression to the HAVING clause of the query.
 //
 // See Where.
 func (b SelectBuilder) Having(pred any, rest ...any) SelectBuilder {
-	return builder.Append(b, "HavingParts", newWherePart(pred, rest...)).(SelectBuilder)
+	b.havingParts = append(b.havingParts, newWherePart(pred, rest...))
+	return b
 }
 
 // OrderByClause adds ORDER BY clause to the query.
 func (b SelectBuilder) OrderByClause(pred any, args ...any) SelectBuilder {
-	return builder.Append(b, "OrderByParts", newPart(pred, args...)).(SelectBuilder)
+	b.orderByParts = append(b.orderByParts, newPart(pred, args...))
+	return b
 }
 
 // OrderBy adds ORDER BY expressions to the query.
@@ -308,22 +302,26 @@ func (b SelectBuilder) OrderBy(orderBys ...string) SelectBuilder {
 
 // Limit sets a LIMIT clause on the query.
 func (b SelectBuilder) Limit(limit uint64) SelectBuilder {
-	return builder.Set(b, "Limit", fmt.Sprintf("%d", limit)).(SelectBuilder)
+	b.limit = fmt.Sprintf("%d", limit)
+	return b
 }
 
 // Limit ALL allows to access all records with limit
 func (b SelectBuilder) RemoveLimit() SelectBuilder {
-	return builder.Delete(b, "Limit").(SelectBuilder)
+	b.limit = ""
+	return b
 }
 
 // Offset sets a OFFSET clause on the query.
 func (b SelectBuilder) Offset(offset uint64) SelectBuilder {
-	return builder.Set(b, "Offset", fmt.Sprintf("%d", offset)).(SelectBuilder)
+	b.offset = fmt.Sprintf("%d", offset)
+	return b
 }
 
 // RemoveOffset removes OFFSET clause.
 func (b SelectBuilder) RemoveOffset() SelectBuilder {
-	return builder.Delete(b, "Offset").(SelectBuilder)
+	b.offset = ""
+	return b
 }
 
 // Suffix adds an expression to the end of the query
@@ -333,13 +331,6 @@ func (b SelectBuilder) Suffix(sql string, args ...any) SelectBuilder {
 
 // SuffixExpr adds an expression to the end of the query
 func (b SelectBuilder) SuffixExpr(expr SQLizer) SelectBuilder {
-	return builder.Append(b, "Suffixes", expr).(SelectBuilder)
-}
-
-// Format methods
-
-// PlaceholderFormat sets PlaceholderFormat (e.g. Question or Dollar) for the
-// query.
-func (b SelectBuilder) PlaceholderFormat(f PlaceholderFormat) SelectBuilder {
-	return builder.Set(b, "PlaceholderFormat", f).(SelectBuilder)
+	b.suffixes = append(b.suffixes, expr)
+	return b
 }
