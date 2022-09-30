@@ -10,7 +10,7 @@ import (
 func TestDollar(t *testing.T) {
 	t.Parallel()
 	sql := "x = ? AND y = ?"
-	s, _ := dollar.ReplacePlaceholders(sql)
+	s, _ := dollarPlaceholder(sql)
 	assert.Equal(t, "x = $1 AND y = $2", s)
 }
 
@@ -22,7 +22,7 @@ func TestPlaceholders(t *testing.T) {
 func TestEscapeDollar(t *testing.T) {
 	t.Parallel()
 	sql := "SELECT uuid, \"data\" #> '{tags}' AS tags FROM nodes WHERE  \"data\" -> 'tags' ??| array['?'] AND enabled = ?"
-	s, _ := dollar.ReplacePlaceholders(sql)
+	s, _ := dollarPlaceholder(sql)
 	assert.Equal(t, "SELECT uuid, \"data\" #> '{tags}' AS tags FROM nodes WHERE  \"data\" -> 'tags' ?| array['$1'] AND enabled = $2", s)
 }
 

@@ -102,7 +102,7 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 		}
 	}
 
-	sqlStr, err = dollar.ReplacePlaceholders(sql.String())
+	sqlStr, err = dollarPlaceholder(sql.String())
 	return
 }
 

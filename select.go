@@ -8,19 +8,19 @@ import (
 
 // SelectBuilder builds SQL SELECT statements.
 type SelectBuilder struct {
-	placeholderFormat placeholderFormat
-	prefixes          []SQLizer
-	options           []string
-	columns           []SQLizer
-	from              SQLizer
-	joins             []SQLizer
-	whereParts        []SQLizer
-	groupBys          []string
-	havingParts       []SQLizer
-	orderByParts      []SQLizer
-	limit             string
-	offset            string
-	suffixes          []SQLizer
+	placeholder  placeholder
+	prefixes     []SQLizer
+	options      []string
+	columns      []SQLizer
+	from         SQLizer
+	joins        []SQLizer
+	whereParts   []SQLizer
+	groupBys     []string
+	havingParts  []SQLizer
+	orderByParts []SQLizer
+	limit        string
+	offset       string
+	suffixes     []SQLizer
 }
 
 // SQL builds the query into a SQL string and bound args.
@@ -30,11 +30,11 @@ func (b SelectBuilder) SQL() (sqlStr string, args []any, err error) {
 		return
 	}
 
-	f := b.placeholderFormat
+	f := b.placeholder
 	if f == nil {
-		f = dollar
+		f = dollarPlaceholder
 	}
-	sqlStr, err = f.ReplacePlaceholders(sqlStr)
+	sqlStr, err = f(sqlStr)
 	return
 }
 
@@ -207,7 +207,7 @@ func (b SelectBuilder) From(from string) SelectBuilder {
 func (b SelectBuilder) FromSelect(from SelectBuilder, alias string) SelectBuilder {
 	// Prevent misnumbered parameters in nested selects
 	// See https://github.com/Masterminds/squirrel/issues/183
-	from.placeholderFormat = question
+	from.placeholder = questionPlaceholder
 	b.from = Alias(from, alias)
 	return b
 }

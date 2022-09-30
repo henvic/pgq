@@ -39,18 +39,10 @@ func Debug(s SQLizer) string {
 		return fmt.Sprintf("[SQL error: %s]", err)
 	}
 
-	var placeholder string
-	downCast, ok := s.(placeholderDebugger)
-	if !ok {
-		placeholder = "?"
-	} else {
-		placeholder = downCast.debugPlaceholder()
-	}
-	// TODO: dedupe this with placeholder.go
 	buf := &bytes.Buffer{}
 	i := 0
 	for {
-		p := strings.Index(sql, placeholder)
+		p := strings.Index(sql, "?")
 		if p == -1 {
 			break
 		}
