@@ -1,6 +1,6 @@
 package pgq
 
-// StatementBuilder builds SQL SELECT statements.
+// StatementBuilder for WHERE parts.
 type StatementBuilder struct {
 	whereParts []SQLizer
 }
@@ -9,29 +9,6 @@ type StatementBuilder struct {
 func (b StatementBuilder) Select(columns ...string) SelectBuilder {
 	builder := SelectBuilder{}.Columns(columns...)
 	builder.whereParts = b.whereParts
-	return builder
-}
-
-// Insert returns a InsertBuilder for this StatementBuilder.
-//
-// Deprecated: Probably useless method. See TestStatementBuilderWhereInsertError.
-func (b StatementBuilder) Insert(into string) InsertBuilder {
-	builder := InsertBuilder{}.Into(into)
-	if b.whereParts != nil {
-		builder.selectBuilder = &SelectBuilder{
-			whereParts: b.whereParts,
-		}
-	}
-	return builder
-}
-
-// Replace returns a InsertBuilder for this StatementBuilder with the
-// statement keyword set to "REPLACE".
-//
-// Deprecated: Probably useless method. See TestStatementBuilderWhereInsertError.
-func (b StatementBuilder) Replace(into string) InsertBuilder {
-	builder := b.Insert(into)
-	builder.replace = true
 	return builder
 }
 
