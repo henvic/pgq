@@ -1,9 +1,8 @@
 package pgq
 
 import (
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteBuilderSQL(t *testing.T) {
@@ -18,22 +17,31 @@ func TestDeleteBuilderSQL(t *testing.T) {
 		Suffix("RETURNING ?", 4)
 
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL :=
+	want :=
 		"WITH prefix AS $1 " +
 			"DELETE FROM a WHERE b = $2 ORDER BY c LIMIT 2 OFFSET 3 " +
 			"RETURNING $3"
-	assert.Equal(t, expectedSQL, sql)
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
 
 	expectedArgs := []any{0, 1, 4}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
 }
 
 func TestDeleteBuilderSQLErr(t *testing.T) {
 	t.Parallel()
 	_, _, err := Delete("").SQL()
-	assert.Error(t, err)
+	want := "delete statements must specify a From table"
+	if err.Error() != want {
+		t.Errorf("expected error to be %q, got %q instead", want, err)
+	}
 }
 
 func TestDeleteBuilderMustSQL(t *testing.T) {
@@ -50,17 +58,30 @@ func TestDeleteBuilder(t *testing.T) {
 	t.Parallel()
 	b := Delete("test").Where("x = ? AND y = ?", 1, 2)
 
-	sql, _, _ := b.SQL()
-	assert.Equal(t, "DELETE FROM test WHERE x = $1 AND y = $2", sql)
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	expectedArgs := []any{1, 2}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, sql)
+	}
+	if want := "DELETE FROM test WHERE x = $1 AND y = $2"; sql != want {
+		t.Errorf("expected %q, got %q instead", want, sql)
+	}
 }
 
 func TestDeleteWithQuery(t *testing.T) {
 	t.Parallel()
 	b := Delete("test").Where("id=55").Suffix("RETURNING path")
 
-	expectedSQL := "DELETE FROM test WHERE id=55 RETURNING path"
+	want := "DELETE FROM test WHERE id=55 RETURNING path"
 
 	got, args := b.MustSQL()
-	assert.Equal(t, expectedSQL, got)
-	assert.Empty(t, args)
+	if got != want {
+		t.Errorf("expected %q, got %q instead", want, got)
+	}
+	if len(args) != 0 {
+		t.Errorf("wanted 0 arguments, got %d instead", len(args))
+	}
 }

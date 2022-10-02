@@ -2,10 +2,9 @@ package pgq
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSelectBuilderSQL(t *testing.T) {
@@ -40,9 +39,11 @@ func TestSelectBuilderSQL(t *testing.T) {
 		Suffix("FETCH FIRST ? ROWS ONLY", 14)
 
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL :=
+	want :=
 		"WITH prefix AS $1 " +
 			"SELECT DISTINCT a, b, c, IF(d IN ($2,$3,$4), 1, 0) as stat_column, a > $5, " +
 			"(b IN ($6,$7,$8)) AS b_alias, " +
@@ -52,10 +53,14 @@ func TestSelectBuilderSQL(t *testing.T) {
 			"WHERE f = $9 AND g = $10 AND h = $11 AND i IN ($12,$13,$14) AND (j = $15 OR (k = $16 AND true)) " +
 			"GROUP BY l HAVING m = n ORDER BY $17 DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
 			"FETCH FIRST $18 ROWS ONLY"
-	assert.Equal(t, expectedSQL, sql)
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
 
 	expectedArgs := []any{0, 1, 2, 3, 100, 101, 102, 103, 4, 5, 6, 7, 8, 9, 10, 11, 1, 14}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
 }
 
 func TestSelectBuilderFromSelect(t *testing.T) {
@@ -63,13 +68,19 @@ func TestSelectBuilderFromSelect(t *testing.T) {
 	subQ := Select("c").From("d").Where(Eq{"i": 0})
 	b := Select("a", "b").FromSelect(subQ, "subq")
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT a, b FROM (SELECT c FROM d WHERE i = $1) AS subq"
-	assert.Equal(t, expectedSQL, sql)
+	want := "SELECT a, b FROM (SELECT c FROM d WHERE i = $1) AS subq"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
 
 	expectedArgs := []any{0}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
 }
 
 func TestSelectBuilderFromSelectNestedDollarPlaceholders(t *testing.T) {
@@ -81,60 +92,87 @@ func TestSelectBuilderFromSelectNestedDollarPlaceholders(t *testing.T) {
 		FromSelect(subQ, "subq").
 		Where(Lt{"c": 2})
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT c FROM (SELECT c FROM t WHERE c > $1) AS subq WHERE c < $2"
-	assert.Equal(t, expectedSQL, sql)
+	want := "SELECT c FROM (SELECT c FROM t WHERE c > $1) AS subq WHERE c < $2"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
 
 	expectedArgs := []any{1, 2}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
 }
 
 func TestSelectBuilderSQLErr(t *testing.T) {
 	t.Parallel()
 	_, _, err := Select().From("x").SQL()
-	assert.Error(t, err)
+
+	want := "select statements must have at least one result column"
+	if err.Error() != want {
+		t.Errorf("expected error to be %q, got %q instead", want, err)
+	}
 }
 
 func TestSelectBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Select("test").Where("x = ? AND y = ?")
 
-	sql, _, _ := b.SQL()
-	assert.Equal(t, "SELECT test WHERE x = $1 AND y = $2", sql)
+	sql, _, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT test WHERE x = $1 AND y = $2"; sql != want {
+		t.Errorf("expected %q, got %q instead", want, sql)
+	}
 }
 
 func TestSelectBuilderSimpleJoin(t *testing.T) {
 	t.Parallel()
-	expectedSQL := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo"
+	want := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo"
 	expectedArgs := []any(nil)
 
 	b := Select("*").From("bar").Join("baz ON bar.foo = baz.foo")
 
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	assert.Equal(t, expectedSQL, sql)
-	assert.Equal(t, args, expectedArgs)
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestSelectBuilderParamJoin(t *testing.T) {
 	t.Parallel()
-	expectedSQL := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo AND baz.foo = $1"
+	want := "SELECT * FROM bar JOIN baz ON bar.foo = baz.foo AND baz.foo = $1"
 	expectedArgs := []any{42}
 
 	b := Select("*").From("bar").Join("baz ON bar.foo = baz.foo AND baz.foo = ?", 42)
 
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	assert.Equal(t, expectedSQL, sql)
-	assert.Equal(t, args, expectedArgs)
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 	t.Parallel()
-	expectedSQL := "SELECT * FROM bar JOIN ( SELECT * FROM baz WHERE foo = $1 ) r ON bar.foo = r.foo"
+	want := "SELECT * FROM bar JOIN ( SELECT * FROM baz WHERE foo = $1 ) r ON bar.foo = r.foo"
 	expectedArgs := []any{42}
 
 	nestedSelect := Select("*").From("baz").Where("foo = ?", 42)
@@ -142,34 +180,52 @@ func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 	b := Select("*").From("bar").JoinClause(nestedSelect.Prefix("JOIN (").Suffix(") r ON bar.foo = r.foo"))
 
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	assert.Equal(t, expectedSQL, sql)
-	assert.Equal(t, args, expectedArgs)
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestSelectWithOptions(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Distinct().Options("SQL_NO_CACHE").SQL()
 
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT DISTINCT SQL_NO_CACHE * FROM foo", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT DISTINCT SQL_NO_CACHE * FROM foo"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }
 
 func TestSelectWithRemoveLimit(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Limit(10).RemoveLimit().SQL()
 
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM foo", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT * FROM foo"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }
 
 func TestSelectWithRemoveOffset(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Offset(10).RemoveOffset().SQL()
 
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM foo", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT * FROM foo"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }
 
 func TestSelectBuilderNestedSelectDollar(t *testing.T) {
@@ -179,8 +235,12 @@ func TestSelectBuilderNestedSelectDollar(t *testing.T) {
 	outerSQL, _, err := Select("*").
 		From("foo").Where("x = ?").Where(nestedBuilder).SQL()
 
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM foo WHERE x = $1 AND NOT EXISTS ( SELECT * FROM bar WHERE y = $2 )", outerSQL)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT * FROM foo WHERE x = $1 AND NOT EXISTS ( SELECT * FROM bar WHERE y = $2 )"; outerSQL != want {
+		t.Errorf("expected %q, got %v", want, outerSQL)
+	}
 }
 
 func TestSelectBuilderMustSQL(t *testing.T) {
@@ -197,22 +257,34 @@ func TestSelectBuilderMustSQL(t *testing.T) {
 func TestSelectWithoutWhereClause(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("users").SQL()
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM users", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT * FROM users"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }
 
 func TestSelectWithNilWhereClause(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("users").Where(nil).SQL()
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM users", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT * FROM users"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }
 
 func TestSelectWithEmptyStringWhereClause(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("users").Where("").SQL()
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM users", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT * FROM users"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }
 
 func TestSelectSubqueryPlaceholderNumbering(t *testing.T) {
@@ -225,11 +297,17 @@ func TestSelectSubqueryPlaceholderNumbering(t *testing.T) {
 		FromSelect(subquery, "q").
 		Where("c = ?", 2).
 		SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "WITH a AS ( SELECT a WHERE b = $1 ) SELECT * FROM (SELECT a WHERE b = $2) AS q WHERE c = $3"
-	assert.Equal(t, expectedSQL, sql)
-	assert.Equal(t, []any{1, 1, 2}, args)
+	want := "WITH a AS ( SELECT a WHERE b = $1 ) SELECT * FROM (SELECT a WHERE b = $2) AS q WHERE c = $3"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+	if want := []any{1, 1, 2}; !reflect.DeepEqual(args, want) {
+		t.Errorf("expected %q, got %q instead", want, args)
+	}
 }
 
 func TestSelectSubqueryInConjunctionPlaceholderNumbering(t *testing.T) {
@@ -240,11 +318,17 @@ func TestSelectSubqueryInConjunctionPlaceholderNumbering(t *testing.T) {
 		Where(Or{subquery}).
 		Where("c = ?", 2).
 		SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT * WHERE (EXISTS( SELECT a WHERE b = $1 )) AND c = $2"
-	assert.Equal(t, expectedSQL, sql)
-	assert.Equal(t, []any{1, 2}, args)
+	want := "SELECT * WHERE (EXISTS( SELECT a WHERE b = $1 )) AND c = $2"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+	if want := []any{1, 2}; !reflect.DeepEqual(args, want) {
+		t.Errorf("expected %q, got %q instead", want, args)
+	}
 }
 
 func TestSelectJoinClausePlaceholderNumbering(t *testing.T) {
@@ -256,11 +340,17 @@ func TestSelectJoinClausePlaceholderNumbering(t *testing.T) {
 		Where(Eq{"a": 1}).
 		JoinClause(subquery.Prefix("JOIN (").Suffix(") t2 ON (t1.a = t2.a)")).
 		SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT t1.a FROM t1 JOIN ( SELECT a WHERE b = $1 ) t2 ON (t1.a = t2.a) WHERE a = $2"
-	assert.Equal(t, expectedSQL, sql)
-	assert.Equal(t, []any{2, 1}, args)
+	want := "SELECT t1.a FROM t1 JOIN ( SELECT a WHERE b = $1 ) t2 ON (t1.a = t2.a) WHERE a = $2"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+	if want := []any{2, 1}; !reflect.DeepEqual(args, want) {
+		t.Errorf("expected %q, got %q instead", want, args)
+	}
 }
 
 func ExampleSelect() {
@@ -352,6 +442,10 @@ func TestRemoveColumns(t *testing.T) {
 		RemoveColumns()
 	query = query.Columns("name")
 	sql, _, err := query.SQL()
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT name FROM users", sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "SELECT name FROM users"; sql != want {
+		t.Errorf("expected %q, got %v", want, sql)
+	}
 }

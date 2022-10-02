@@ -1,9 +1,8 @@
 package pgq
 
 import (
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCaseWithVal(t *testing.T) {
@@ -18,18 +17,24 @@ func TestCaseWithVal(t *testing.T) {
 		From("table")
 	sql, args, err := qb.SQL()
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT CASE number " +
+	want := "SELECT CASE number " +
 		"WHEN 1 THEN one " +
 		"WHEN 2 THEN two " +
 		"ELSE $1 " +
 		"END " +
 		"FROM table"
-	assert.Equal(t, expectedSQL, sql)
+	if sql != want {
+		t.Errorf("wanted %v, got %v instead", want, sql)
+	}
 
 	expectedArgs := []any{"big number"}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, sql)
+	}
 }
 
 func TestCaseWithComplexVal(t *testing.T) {
@@ -42,16 +47,22 @@ func TestCaseWithComplexVal(t *testing.T) {
 		From("table")
 	sql, args, err := qb.SQL()
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT (CASE $1 > $2 " +
+	want := "SELECT (CASE $1 > $2 " +
 		"WHEN true THEN 'T' " +
 		"END) AS complexCase " +
 		"FROM table"
-	assert.Equal(t, expectedSQL, sql)
+	if sql != want {
+		t.Errorf("wanted %v, got %v instead", want, sql)
+	}
 
 	expectedArgs := []any{10, 5}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestCaseWithNoVal(t *testing.T) {
@@ -63,18 +74,24 @@ func TestCaseWithNoVal(t *testing.T) {
 	qb := Select().Column(caseStmt).From("table")
 	sql, args, err := qb.SQL()
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT CASE " +
+	want := "SELECT CASE " +
 		"WHEN x = $1 THEN x is zero " +
 		"WHEN x > $2 THEN CONCAT('x is greater than ', $3) " +
 		"END " +
 		"FROM table"
 
-	assert.Equal(t, expectedSQL, sql)
+	if sql != want {
+		t.Errorf("wanted %v, got %v instead", want, sql)
+	}
 
 	expectedArgs := []any{0, 1, 2}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestCaseWithExpr(t *testing.T) {
@@ -86,18 +103,24 @@ func TestCaseWithExpr(t *testing.T) {
 	qb := Select().Column(caseStmt).From("table")
 	sql, args, err := qb.SQL()
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT CASE x = $1 " +
+	want := "SELECT CASE x = $1 " +
 		"WHEN true THEN $2 " +
 		"ELSE 42 " +
 		"END " +
 		"FROM table"
 
-	assert.Equal(t, expectedSQL, sql)
+	if sql != want {
+		t.Errorf("wanted %v, got %v instead", want, sql)
+	}
 
 	expectedArgs := []any{true, "it's true!"}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestMultipleCase(t *testing.T) {
@@ -116,20 +139,26 @@ func TestMultipleCase(t *testing.T) {
 
 	sql, args, err := qb.SQL()
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL := "SELECT " +
+	want := "SELECT " +
 		"(CASE x = $1 WHEN true THEN $2 ELSE 42 END) AS case_noval, " +
 		"(CASE WHEN x = $3 THEN 'x is zero' WHEN x > $4 THEN CONCAT('x is greater than ', $5) END) AS case_expr " +
 		"FROM table"
 
-	assert.Equal(t, expectedSQL, sql)
+	if sql != want {
+		t.Errorf("wanted %v, got %v instead", want, sql)
+	}
 
 	expectedArgs := []any{
 		true, "it's true!",
 		0, 1, 2,
 	}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
 }
 
 func TestCaseWithNoWhenClause(t *testing.T) {
@@ -141,9 +170,10 @@ func TestCaseWithNoWhenClause(t *testing.T) {
 
 	_, _, err := qb.SQL()
 
-	assert.Error(t, err)
-
-	assert.Equal(t, "case expression must contain at lease one WHEN clause", err.Error())
+	want := "case expression must contain at lease one WHEN clause"
+	if err.Error() != want {
+		t.Errorf("wanted error to be %v, got %v instead", want, err)
+	}
 }
 
 func TestCaseBuilderMustSQL(t *testing.T) {

@@ -13,6 +13,8 @@ func (b StatementBuilder) Select(columns ...string) SelectBuilder {
 }
 
 // Insert returns a InsertBuilder for this StatementBuilder.
+//
+// Deprecated: Probably useless method. See TestStatementBuilderWhereInsertError.
 func (b StatementBuilder) Insert(into string) InsertBuilder {
 	builder := InsertBuilder{}.Into(into)
 	if b.whereParts != nil {
@@ -25,6 +27,8 @@ func (b StatementBuilder) Insert(into string) InsertBuilder {
 
 // Replace returns a InsertBuilder for this StatementBuilder with the
 // statement keyword set to "REPLACE".
+//
+// Deprecated: Probably useless method. See TestStatementBuilderWhereInsertError.
 func (b StatementBuilder) Replace(into string) InsertBuilder {
 	builder := b.Insert(into)
 	builder.replace = true

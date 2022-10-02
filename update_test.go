@@ -1,9 +1,8 @@
 package pgq
 
 import (
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestUpdateBuilderSQL(t *testing.T) {
@@ -23,9 +22,11 @@ func TestUpdateBuilderSQL(t *testing.T) {
 		Suffix("RETURNING ?", 6)
 
 	sql, args, err := b.SQL()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
-	expectedSQL :=
+	want :=
 		"WITH prefix AS $1 " +
 			"UPDATE a SET b = $2 + 1, c = $3, " +
 			"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
@@ -34,19 +35,27 @@ func TestUpdateBuilderSQL(t *testing.T) {
 			"WHERE d = $6 " +
 			"ORDER BY e LIMIT 4 OFFSET 5 " +
 			"RETURNING $7"
-	assert.Equal(t, expectedSQL, sql)
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
 
 	expectedArgs := []any{0, 1, 2, "foo", "bar", 3, 6}
-	assert.Equal(t, expectedArgs, args)
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
 }
 
 func TestUpdateBuilderSQLErr(t *testing.T) {
 	t.Parallel()
 	_, _, err := Update("").Set("x", 1).SQL()
-	assert.Error(t, err)
+	if want := "update statements must specify a table"; err.Error() != want {
+		t.Errorf("expected error to be %q, got %q instead", want, err)
+	}
 
 	_, _, err = Update("x").SQL()
-	assert.Error(t, err)
+	if want := "update statements must have at least one Set clause"; err.Error() != want {
+		t.Errorf("expected error to be %q, got %q instead", want, err)
+	}
 }
 
 func TestUpdateBuilderMustSQL(t *testing.T) {
@@ -63,6 +72,11 @@ func TestUpdateBuilderPlaceholders(t *testing.T) {
 	t.Parallel()
 	b := Update("test").SetMap(Eq{"x": 1, "y": 2})
 
-	sql, _, _ := b.SQL()
-	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
+	sql, _, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "UPDATE test SET x = $1, y = $2"; sql != want {
+		t.Errorf("expected %q, got %q instead", want, sql)
+	}
 }

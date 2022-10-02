@@ -3,27 +3,39 @@ package pgq
 import (
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDollar(t *testing.T) {
 	t.Parallel()
 	sql := "x = ? AND y = ?"
-	s, _ := dollarPlaceholder(sql)
-	assert.Equal(t, "x = $1 AND y = $2", s)
+	s, err := dollarPlaceholder(sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if want := "x = $1 AND y = $2"; s != want {
+		t.Errorf("expected %q, got %q instead", want, s)
+	}
 }
 
 func TestPlaceholders(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, Placeholders(2), "?,?")
+	got := Placeholders(2)
+	if want := "?,?"; got != want {
+		t.Errorf("expected %q, got %q instead", want, got)
+	}
 }
 
 func TestEscapeDollar(t *testing.T) {
 	t.Parallel()
 	sql := "SELECT uuid, \"data\" #> '{tags}' AS tags FROM nodes WHERE  \"data\" -> 'tags' ??| array['?'] AND enabled = ?"
-	s, _ := dollarPlaceholder(sql)
-	assert.Equal(t, "SELECT uuid, \"data\" #> '{tags}' AS tags FROM nodes WHERE  \"data\" -> 'tags' ?| array['$1'] AND enabled = $2", s)
+	s, err := dollarPlaceholder(sql)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	want := "SELECT uuid, \"data\" #> '{tags}' AS tags FROM nodes WHERE  \"data\" -> 'tags' ?| array['$1'] AND enabled = $2"
+	if s != want {
+		t.Errorf("expected %q, got %q instead", want, s)
+	}
 }
 
 func BenchmarkPlaceholdersArray(b *testing.B) {
