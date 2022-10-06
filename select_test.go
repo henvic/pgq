@@ -16,8 +16,14 @@ func TestSelectBuilderSQL(t *testing.T) {
 		Columns("c").
 		Column("IF(d IN ("+Placeholders(3)+"), 1, 0) as stat_column", 1, 2, 3).
 		Column(Expr("a > ?", 100)).
-		Column(Alias(Eq{"b": []int{101, 102, 103}}, "b_alias")).
-		Column(Alias(subQ, "subq")).
+		Column(Alias{
+			Expr: Eq{"b": []int{101, 102, 103}},
+			As:   "b_alias",
+		}).
+		Column(Alias{
+			Expr: subQ,
+			As:   "subq",
+		}).
 		From("e").
 		JoinClause("CROSS JOIN j1").
 		Join("j2").

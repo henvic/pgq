@@ -43,7 +43,10 @@ func TestCaseWithComplexVal(t *testing.T) {
 		When("true", "'T'")
 
 	qb := Select().
-		Column(Alias(caseStmt, "complexCase")).
+		Column(Alias{
+			Expr: caseStmt,
+			As:   "complexCase",
+		}).
 		From("table")
 	sql, args, err := qb.SQL()
 
@@ -133,8 +136,14 @@ func TestMultipleCase(t *testing.T) {
 		When(Expr("x > ?", 1), Expr("CONCAT('x is greater than ', ?)", 2))
 
 	qb := Select().
-		Column(Alias(caseStmtNoval, "case_noval")).
-		Column(Alias(caseStmtExpr, "case_expr")).
+		Column(Alias{
+			Expr: caseStmtNoval,
+			As:   "case_noval",
+		}).
+		Column(Alias{
+			Expr: caseStmtExpr,
+			As:   "case_expr",
+		}).
 		From("table")
 
 	sql, args, err := qb.SQL()

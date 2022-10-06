@@ -8,8 +8,7 @@ import (
 
 func TestConcatExpr(t *testing.T) {
 	t.Parallel()
-	b := ConcatExpr("COALESCE(name,", Expr("CONCAT(?,' ',?)", "f", "l"), ")")
-	sql, args, err := b.SQL()
+	sql, args, err := ConcatSQL("COALESCE(name,", Expr("CONCAT(?,' ',?)", "f", "l"), ")")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -27,8 +26,7 @@ func TestConcatExpr(t *testing.T) {
 
 func TestConcatExprBadType(t *testing.T) {
 	t.Parallel()
-	b := ConcatExpr("prefix", 123, "suffix")
-	_, _, err := b.SQL()
+	_, _, err := ConcatSQL("prefix", 123, "suffix")
 	want := "123 is not a string or SQLizer"
 	if err.Error() != want {
 		t.Errorf("expected error to be %q, got %q instead", want, err)

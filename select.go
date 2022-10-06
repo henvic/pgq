@@ -208,7 +208,10 @@ func (b SelectBuilder) FromSelect(from SelectBuilder, alias string) SelectBuilde
 	// Prevent misnumbered parameters in nested selects
 	// See https://github.com/Masterminds/squirrel/issues/183
 	from.placeholder = questionPlaceholder
-	b.from = Alias(from, alias)
+	b.from = Alias{
+		Expr: from,
+		As:   alias,
+	}
 	return b
 }
 

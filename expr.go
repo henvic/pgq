@@ -82,9 +82,13 @@ func (e expr) SQL() (sql string, args []any, err error) {
 	return buf.String(), append(args, ap...), err
 }
 
-type concatExpr []any
-
-func (ce concatExpr) SQL() (sql string, args []any, err error) {
+// ConcatSQL builds a SQL of an expression by concatenating strings and other expressions.
+//
+// Ex:
+//
+//	name_expr := Expr("CONCAT(?, ' ', ?)", firstName, lastName)
+//	ConcatSQL("COALESCE(full_name,", name_expr, ")")
+func ConcatSQL(ce ...any) (sql string, args []any, err error) {
 	for _, part := range ce {
 		switch p := part.(type) {
 		case string:
@@ -103,35 +107,21 @@ func (ce concatExpr) SQL() (sql string, args []any, err error) {
 	return
 }
 
-// ConcatExpr builds an expression by concatenating strings and other expressions.
-//
-// Ex:
-//
-//	name_expr := Expr("CONCAT(?, ' ', ?)", firstName, lastName)
-//	ConcatExpr("COALESCE(full_name,", name_expr, ")")
-func ConcatExpr(parts ...any) concatExpr {
-	return concatExpr(parts)
-}
-
-// aliasExpr helps to alias part of SQL query generated with underlying "expr"
-type aliasExpr struct {
-	expr  SQLizer
-	alias string
-}
-
 // Alias allows to define alias for column in SelectBuilder. Useful when column is
 // defined as complex expression like IF or CASE
 // Ex:
 //
-//	.Column(Alias(caseStmt, "case_column"))
-func Alias(expr SQLizer, alias string) aliasExpr {
-	return aliasExpr{expr, alias}
+//	.Column(Alias{Expr: caseStmt, Alias: "case_column"})
+type Alias struct {
+	Expr SQLizer
+	As   string
 }
 
-func (e aliasExpr) SQL() (sql string, args []any, err error) {
-	sql, args, err = e.expr.SQL()
+// AliasExprSQL returns a SQL query based on the alias.
+func (a Alias) SQL() (sql string, args []any, err error) {
+	sql, args, err = a.Expr.SQL()
 	if err == nil {
-		sql = fmt.Sprintf("(%s) AS %s", sql, e.alias)
+		sql = fmt.Sprintf("(%s) AS %s", sql, a.As)
 	}
 	return
 }
@@ -376,9 +366,7 @@ func (gtOrEq GtOrEq) SQL() (sql string, args []any, err error) {
 	return Lt(gtOrEq).toSQL(true, true)
 }
 
-type conj []SQLizer
-
-func (c conj) join(sep, defaultExpr string) (sql string, args []any, err error) {
+func join(c []SQLizer, sep, defaultExpr string) (sql string, args []any, err error) {
 	if len(c) == 0 {
 		return defaultExpr, []any{}, nil
 	}
@@ -400,17 +388,17 @@ func (c conj) join(sep, defaultExpr string) (sql string, args []any, err error) 
 }
 
 // And conjunction SQLizers
-type And conj
+type And []SQLizer
 
 func (a And) SQL() (string, []any, error) {
-	return conj(a).join(" AND ", sqlTrue)
+	return join(a, " AND ", sqlTrue)
 }
 
 // Or conjunction SQLizers
-type Or conj
+type Or []SQLizer
 
 func (o Or) SQL() (string, []any, error) {
-	return conj(o).join(" OR ", sqlFalse)
+	return join(o, " OR ", sqlFalse)
 }
 
 func getSortedKeys(exp map[string]any) []string {
