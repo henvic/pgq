@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	// Portable true/false literals.
-	sqlTrue  = "(1=1)"
-	sqlFalse = "(1=0)"
+	// PostgreSQL true/false literals.
+	sqlTrue  = "(TRUE)"
+	sqlFalse = "(FALSE)"
 )
 
 type expr struct {

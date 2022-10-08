@@ -62,7 +62,7 @@ func TestEqEmptySQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "(1=1)"
+	want := "(TRUE)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
@@ -136,7 +136,7 @@ func TestEqInEmptySQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "(1=0)"
+	want := "(FALSE)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
@@ -155,7 +155,7 @@ func TestNotEqInEmptySQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "(1=1)"
+	want := "(TRUE)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
@@ -529,7 +529,7 @@ func TestEmptyAndSQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "(1=1)"
+	want := "(TRUE)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
@@ -547,7 +547,7 @@ func TestEmptyOrSQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "(1=0)"
+	want := "(FALSE)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}

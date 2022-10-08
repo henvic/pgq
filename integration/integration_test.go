@@ -97,13 +97,13 @@ func TestIntegration(t *testing.T) {
 		{
 			name: "keqempty",
 			q:    s.Where(pgq.Eq{"k": []int{}}),
-			sql:  "SELECT v FROM pgq_integration WHERE (1=0)",
+			sql:  "SELECT v FROM pgq_integration WHERE (FALSE)",
 			rows: []string{},
 		},
 		{
 			name: "knoteqempty",
 			q:    s.Where(pgq.NotEq{"k": []int{}}),
-			sql:  "SELECT v FROM pgq_integration WHERE (1=0)",
+			sql:  "SELECT v FROM pgq_integration WHERE (FALSE)",
 			rows: []string{"foo", "bar", "foo", "baz"},
 		},
 		{
