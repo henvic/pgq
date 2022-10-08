@@ -2,139 +2,166 @@ package integration
 
 import (
 	"context"
-	"database/sql"
+	"embed"
 	"flag"
-	"fmt"
+	"io/fs"
+	"log"
 	"os"
+	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-  sqrl "github.com/Masterminds/squirrel"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/henvic/pgq"
+	"github.com/henvic/pgtools/sqltest"
+	"github.com/jackc/pgx/v5"
 )
 
-const (
-	testSchema = `
-		CREATE TABLE squirrel_integration ( k INT, v TEXT )`
-	testData = `
-		INSERT INTO squirrel_integration VALUES
-			(1, 'foo'),
-			(3, 'bar'),
-			(2, 'foo'),
-			(4, 'baz')
-		`
-)
+//go:embed migrations
+var mig embed.FS
 
-var (
-	sb sqrl.StatementBuilderType
-)
+var force = flag.Bool("force", false, "Force cleaning the database before starting")
 
 func TestMain(m *testing.M) {
-	var driver, dataSource string
-	flag.StringVar(&driver, "driver", "", "integration database driver")
-	flag.StringVar(&dataSource, "dataSource", "", "integration database data source")
-	flag.Parse()
-
-  if driver == "" {
-    driver = "sqlite3"
-  }
-
-	if driver == "sqlite3" && dataSource == "" {
-		dataSource = ":memory:"
+	if os.Getenv("INTEGRATION_TESTDB") != "true" {
+		log.Printf("Skipping tests that require database connection")
+		return
 	}
-
-	db, err := sql.Open(driver, dataSource)
-	if err != nil {
-		fmt.Printf("error opening database: %v\n", err)
-		os.Exit(-1)
-	}
-
-	_, err = db.Exec(testSchema)
-	if err != nil {
-		fmt.Printf("error creating test schema: %v\n", err)
-		os.Exit(-2)
-	}
-
-	defer func() {
-		_, err = db.Exec("DROP TABLE squirrel_integration")
-		fmt.Printf("error removing test schema: %v\n", err)
-	}()
-
-	_, err = db.Exec(testData)
-	if err != nil {
-		fmt.Printf("error inserting test data: %v\n", err)
-		os.Exit(-3)
-	}
-
-	sb = sqrl.StatementBuilder.RunWith(db)
-
-	if driver == "postgres" {
-		sb = sb.PlaceholderFormat(sqrl.Dollar)
-	}
-
 	os.Exit(m.Run())
 }
 
-func assertVals(t *testing.T, s sqrl.SelectBuilder, expected ...string) {
-	rows, err := s.Query()
-	assert.NoError(t, err)
-	defer rows.Close()
+func TestIntegration(t *testing.T) {
+	t.Parallel()
 
-	vals := make([]string, len(expected))
-	for i := range vals {
-		assert.True(t, rows.Next())
-		assert.NoError(t, rows.Scan(&vals[i]))
+	fsys, err := fs.Sub(mig, "migrations")
+	if err != nil {
+		t.Fatal(fsys)
 	}
-	assert.False(t, rows.Next())
+	migration := sqltest.New(t, sqltest.Options{
+		Force: *force,
+		Files: fsys,
+	})
+	pool := migration.Setup(context.Background(), "")
 
-	if expected != nil {
-		assert.Equal(t, expected, vals)
+	s := pgq.Select("v").From("pgq_integration")
+
+	type sqler interface {
+		SQL() (sqlStr string, args []any, err error)
 	}
-}
 
-func TestSimpleSelect(t *testing.T) {
-	t.Parallel()
-	assertVals(
-		t,
-		sb.Select("v").From("squirrel_integration"),
-		"foo", "bar", "foo", "baz")
-}
+	var testCases = []struct {
+		name string
+		q    sqler
+		sql  string
+		args []any
+		rows []string
+	}{
+		{
+			name: "keq4",
+			q:    s.Where(pgq.Eq{"k": 4}),
+			sql:  "SELECT v FROM pgq_integration WHERE k = $1",
+			args: []any{4},
+			rows: []string{"baz"},
+		},
+		{
+			name: "kneq2",
+			q:    s.Where(pgq.NotEq{"k": 2}),
+			sql:  "SELECT v FROM pgq_integration WHERE k <> $1",
+			args: []any{2},
+			rows: []string{"foo", "bar", "baz"},
+		},
+		{
+			name: "keq14",
+			q:    s.Where(pgq.Eq{"k": []int{1, 4}}),
+			sql:  "SELECT v FROM pgq_integration WHERE k IN ($1,$2)",
+			args: []any{1, 4},
+			rows: []string{"foo", "baz"},
+		},
+		{
+			name: "kneq14",
+			q:    s.Where(pgq.NotEq{"k": []int{1, 4}}),
+			sql:  "SELECT v FROM pgq_integration WHERE k NOT IN ($1,$2)",
+			args: []any{1, 4},
+			rows: []string{"bar", "foo"},
+		},
+		{
+			name: "knil",
+			q:    s.Where(pgq.Eq{"k": nil}),
+			sql:  "SELECT v FROM pgq_integration WHERE k IS NULL",
+			rows: []string{},
+		},
+		{
+			name: "knotnil",
+			q:    s.Where(pgq.NotEq{"k": nil}),
+			sql:  "SELECT v FROM pgq_integration WHERE k IS NOT NULL",
+			rows: []string{"foo", "bar", "foo", "baz"},
+		},
+		{
+			name: "keqempty",
+			q:    s.Where(pgq.Eq{"k": []int{}}),
+			sql:  "SELECT v FROM pgq_integration WHERE (1=0)",
+			rows: []string{},
+		},
+		{
+			name: "knoteqempty",
+			q:    s.Where(pgq.NotEq{"k": []int{}}),
+			sql:  "SELECT v FROM pgq_integration WHERE (1=0)",
+			rows: []string{"foo", "bar", "foo", "baz"},
+		},
+		{
+			name: "klt3",
+			q:    s.Where(pgq.Lt{"k": 3}),
+			sql:  "SELECT v FROM pgq_integration WHERE k < $1",
+			args: []any{3},
+			rows: []string{"foo", "foo"},
+		},
+		{
+			name: "kgt3",
+			q:    s.Where(pgq.Gt{"k": 3}),
+			sql:  "SELECT v FROM pgq_integration WHERE k > $1",
+			args: []any{3},
+			rows: []string{"baz"},
+		},
+		{
+			name: "kgt1andlt4",
+			q:    s.Where(pgq.And{pgq.Gt{"k": 1}, pgq.Lt{"k": 4}}),
+			sql:  "SELECT v FROM pgq_integration WHERE (k > $1 AND k < $2)",
+			args: []any{1, 4},
+			rows: []string{"bar", "foo"},
+		},
+		{
+			name: "kgt3orlt2",
+			q:    s.Where(pgq.Or{pgq.Gt{"k": 3}, pgq.Lt{"k": 2}}),
+			sql:  "SELECT v FROM pgq_integration WHERE (k > $1 OR k < $2)",
+			args: []any{3, 2},
+			rows: []string{"foo", "baz"},
+		},
+	}
 
-func TestEq(t *testing.T) {
-	t.Parallel()
-	s := sb.Select("v").From("squirrel_integration")
-	assertVals(t, s.Where(sqrl.Eq{"k": 4}), "baz")
-	assertVals(t, s.Where(sqrl.NotEq{"k": 2}), "foo", "bar", "baz")
-	assertVals(t, s.Where(sqrl.Eq{"k": []int{1, 4}}), "foo", "baz")
-	assertVals(t, s.Where(sqrl.NotEq{"k": []int{1, 4}}), "bar", "foo")
-	assertVals(t, s.Where(sqrl.Eq{"k": nil}))
-	assertVals(t, s.Where(sqrl.NotEq{"k": nil}), "foo", "bar", "foo", "baz")
-	assertVals(t, s.Where(sqrl.Eq{"k": []int{}}))
-	assertVals(t, s.Where(sqrl.NotEq{"k": []int{}}), "foo", "bar", "foo", "baz")
-}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.q.SQL()
+			if err != nil {
+				t.Errorf("expected no error, got %v instead", err)
+			}
+			if sql != tc.sql {
+				t.Errorf("expected %q, got %q instead", tc.sql, sql)
+			}
+			if !reflect.DeepEqual(args, tc.args) {
+				t.Errorf("expected %v, got %v instead", tc.args, args)
+			}
 
-func TestIneq(t *testing.T) {
-	t.Parallel()
-	s := sb.Select("v").From("squirrel_integration")
-	assertVals(t, s.Where(sqrl.Lt{"k": 3}), "foo", "foo")
-	assertVals(t, s.Where(sqrl.Gt{"k": 3}), "baz")
-}
+			var data []string
+			rows, err := pool.Query(context.Background(), sql, args...)
+			if err == nil {
+				data, err = pgx.CollectRows(rows, pgx.RowTo[string])
+			}
+			if err != nil {
+				t.Errorf("expected no error, got %v instead", err)
+			}
 
-func TestConj(t *testing.T) {
-	t.Parallel()
-	s := sb.Select("v").From("squirrel_integration")
-	assertVals(t, s.Where(sqrl.And{sqrl.Gt{"k": 1}, sqrl.Lt{"k": 4}}), "bar", "foo")
-	assertVals(t, s.Where(sqrl.Or{sqrl.Gt{"k": 3}, sqrl.Lt{"k": 2}}), "foo", "baz")
-}
-
-func TestContext(t *testing.T) {
-	t.Parallel()
-	s := sb.Select("v").From("squirrel_integration")
-	ctx := context.Background()
-	_, err := s.QueryContext(ctx)
-	assert.NoError(t, err)
+			if !reflect.DeepEqual(data, tc.rows) {
+				t.Errorf("expected %v, got %v instead", tc.rows, data)
+			}
+		})
+	}
 }
