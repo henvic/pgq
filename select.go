@@ -191,7 +191,7 @@ func (b SelectBuilder) RemoveColumns() SelectBuilder {
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
 //
-//	Column("IF(col IN ("+squirrel.Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
+//	Column("IF(col IN ("+pgq.Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b SelectBuilder) Column(column any, args ...any) SelectBuilder {
 	b.columns = append(b.columns, newPart(column, args...))
 	return b
