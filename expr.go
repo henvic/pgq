@@ -139,16 +139,16 @@ func (eq Eq) toSQL(useNotOpr bool) (sql string, args []any, err error) {
 	var (
 		exprs       []string
 		equalOpr    = "="
-		inOpr       = "IN"
 		nullOpr     = "IS"
 		inEmptyExpr = sqlFalse
+		inOpr       = "ANY"
 	)
 
 	if useNotOpr {
 		equalOpr = "<>"
-		inOpr = "NOT IN"
 		nullOpr = "IS NOT"
 		inEmptyExpr = sqlTrue
+		inOpr = "ALL"
 	}
 
 	sortedKeys := getSortedKeys(eq)
@@ -183,10 +183,8 @@ func (eq Eq) toSQL(useNotOpr bool) (sql string, args []any, err error) {
 						args = []any{}
 					}
 				} else {
-					for i := 0; i < valVal.Len(); i++ {
-						args = append(args, valVal.Index(i).Interface())
-					}
-					expr = fmt.Sprintf("%s %s (%s)", key, inOpr, Placeholders(valVal.Len()))
+					expr = fmt.Sprintf("%s %s %s (?)", key, equalOpr, inOpr)
+					args = append(args, val)
 				}
 			} else {
 				expr = fmt.Sprintf("%s %s ?", key, equalOpr)

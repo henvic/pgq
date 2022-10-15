@@ -261,8 +261,8 @@ func (b SelectBuilder) CrossJoin(join string, rest ...any) SelectBuilder {
 // map[string]any OR Eq - map of SQL expressions to values. Each key is
 // transformed into an expression like "<key> = ?", with the corresponding value
 // bound to the placeholder. If the value is nil, the expression will be "<key>
-// IS NULL". If the value is an array or slice, the expression will be "<key> IN
-// (?,?,...)", with one placeholder for each item in the value. These expressions
+// IS NULL". If the value is an array or slice, the expression will be "<key> = ANY
+// (?)". These expressions
 // are ANDed together.
 //
 // Where will panic if pred isn't any of the above types.

@@ -71,15 +71,15 @@ func TestIntegration(t *testing.T) {
 		{
 			name: "keq14",
 			q:    s.Where(pgq.Eq{"k": []int{1, 4}}),
-			sql:  "SELECT v FROM pgq_integration WHERE k IN ($1,$2)",
-			args: []any{1, 4},
+			sql:  "SELECT v FROM pgq_integration WHERE k = ANY ($1)",
+			args: []any{[]int{1, 4}},
 			rows: []string{"foo", "baz"},
 		},
 		{
 			name: "kneq14",
 			q:    s.Where(pgq.NotEq{"k": []int{1, 4}}),
-			sql:  "SELECT v FROM pgq_integration WHERE k NOT IN ($1,$2)",
-			args: []any{1, 4},
+			sql:  "SELECT v FROM pgq_integration WHERE k <> ALL ($1)",
+			args: []any{[]int{1, 4}},
 			rows: []string{"bar", "foo"},
 		},
 		{

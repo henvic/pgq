@@ -79,12 +79,12 @@ func TestEqInSQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "id IN (?,?,?)"
+	want := "id = ANY (?)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
 
-	expectedArgs := []any{1, 2, 3}
+	expectedArgs := []any{[]int{1, 2, 3}}
 	if !reflect.DeepEqual(expectedArgs, args) {
 		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
 	}
@@ -117,12 +117,12 @@ func TestEqNotInSQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want := "id NOT IN (?,?,?)"
+	want := "id <> ALL (?)"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
 
-	expectedArgs := []any{1, 2, 3}
+	expectedArgs := []any{[]int{1, 2, 3}}
 	if !reflect.DeepEqual(expectedArgs, args) {
 		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
 	}
@@ -476,10 +476,10 @@ func TestNotNilPointer(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if want := []any{1, 2, 3}; !reflect.DeepEqual(args, want) {
+	if want := []any{[]int{1, 2, 3}}; !reflect.DeepEqual(args, want) {
 		t.Errorf("expected args to be %q, got %q instead", want, args)
 	}
-	if want := "id IN (?,?,?)"; sql != want {
+	if want := "id = ANY (?)"; sql != want {
 		t.Errorf("expected args to be %q, got %q instead", want, sql)
 	}
 
@@ -488,10 +488,10 @@ func TestNotNilPointer(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if want := []any{1, 2, 3}; !reflect.DeepEqual(args, want) {
+	if want := []any{[]int{1, 2, 3}}; !reflect.DeepEqual(args, want) {
 		t.Errorf("expected args to be %q, got %q instead", want, args)
 	}
-	if want := "id NOT IN (?,?,?)"; sql != want {
+	if want := "id <> ALL (?)"; sql != want {
 		t.Errorf("expected args to be %q, got %q instead", want, sql)
 	}
 
@@ -502,10 +502,10 @@ func TestNotNilPointer(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if want := []any{1, 2, 3}; !reflect.DeepEqual(args, want) {
+	if want := []any{[3]int{1, 2, 3}}; !reflect.DeepEqual(args, want) {
 		t.Errorf("expected args to be %q, got %q instead", want, args)
 	}
-	if want := "id IN (?,?,?)"; sql != want {
+	if want := "id = ANY (?)"; sql != want {
 		t.Errorf("expected args to be %q, got %q instead", want, sql)
 	}
 
@@ -514,10 +514,10 @@ func TestNotNilPointer(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if want := []any{1, 2, 3}; !reflect.DeepEqual(args, want) {
+	if want := []any{[3]int{1, 2, 3}}; !reflect.DeepEqual(args, want) {
 		t.Errorf("expected args to be %q, got %q instead", want, args)
 	}
-	if want := "id NOT IN (?,?,?)"; sql != want {
+	if want := "id <> ALL (?)"; sql != want {
 		t.Errorf("expected args to be %q, got %q instead", want, sql)
 	}
 }
