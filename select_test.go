@@ -200,12 +200,12 @@ func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 
 func TestSelectWithOptions(t *testing.T) {
 	t.Parallel()
-	sql, _, err := Select("*").From("foo").Distinct().Options("SQL_NO_CACHE").SQL()
+	sql, _, err := Select("*").From("foo").Options("ALL").SQL()
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if want := "SELECT DISTINCT SQL_NO_CACHE * FROM foo"; sql != want {
+	if want := "SELECT ALL * FROM foo"; sql != want {
 		t.Errorf("expected %q, got %v", want, sql)
 	}
 }

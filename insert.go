@@ -13,7 +13,6 @@ import (
 type InsertBuilder struct {
 	prefixes      []SQLizer
 	replace       bool
-	options       []string
 	into          string
 	columns       []string
 	values        [][]any
@@ -47,11 +46,6 @@ func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString("INSERT ")
 	} else {
 		sql.WriteString("REPLACE ")
-	}
-
-	if len(b.options) > 0 {
-		sql.WriteString(strings.Join(b.options, " "))
-		sql.WriteString(" ")
 	}
 
 	sql.WriteString("INTO ")
@@ -150,12 +144,6 @@ func (b InsertBuilder) Prefix(sql string, args ...any) InsertBuilder {
 // PrefixExpr adds an expression to the very beginning of the query
 func (b InsertBuilder) PrefixExpr(expr SQLizer) InsertBuilder {
 	b.prefixes = append(b.prefixes, expr)
-	return b
-}
-
-// Options adds keyword options before the INTO clause of the query.
-func (b InsertBuilder) Options(options ...string) InsertBuilder {
-	b.options = append(b.options, options...)
 	return b
 }
 

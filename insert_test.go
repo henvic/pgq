@@ -10,7 +10,6 @@ func TestInsertBuilderSQL(t *testing.T) {
 	b := Insert("").
 		Prefix("WITH prefix AS ?", 0).
 		Into("a").
-		Options("DELAYED", "IGNORE").
 		Columns("b", "c").
 		Values(1, 2).
 		Values(3, Expr("? + 1", 4)).
@@ -23,7 +22,7 @@ func TestInsertBuilderSQL(t *testing.T) {
 
 	want :=
 		"WITH prefix AS $1 " +
-			"INSERT DELAYED IGNORE INTO a (b,c) VALUES ($2,$3),($4,$5 + 1) " +
+			"INSERT INTO a (b,c) VALUES ($2,$3),($4,$5 + 1) " +
 			"RETURNING $6"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
