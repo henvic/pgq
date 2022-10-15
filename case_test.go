@@ -14,7 +14,7 @@ func TestCaseWithVal(t *testing.T) {
 
 	qb := Select().
 		Column(caseStmt).
-		From("table")
+		From("atable")
 	sql, args, err := qb.SQL()
 
 	if err != nil {
@@ -26,7 +26,7 @@ func TestCaseWithVal(t *testing.T) {
 		"WHEN 2 THEN two " +
 		"ELSE $1 " +
 		"END " +
-		"FROM table"
+		"FROM atable"
 	if sql != want {
 		t.Errorf("wanted %v, got %v instead", want, sql)
 	}
@@ -47,7 +47,7 @@ func TestCaseWithComplexVal(t *testing.T) {
 			Expr: caseStmt,
 			As:   "complexCase",
 		}).
-		From("table")
+		From("atable")
 	sql, args, err := qb.SQL()
 
 	if err != nil {
@@ -57,7 +57,7 @@ func TestCaseWithComplexVal(t *testing.T) {
 	want := "SELECT (CASE $1 > $2 " +
 		"WHEN true THEN 'T' " +
 		"END) AS complexCase " +
-		"FROM table"
+		"FROM atable"
 	if sql != want {
 		t.Errorf("wanted %v, got %v instead", want, sql)
 	}
@@ -74,7 +74,7 @@ func TestCaseWithNoVal(t *testing.T) {
 		When(Eq{"x": 0}, "x is zero").
 		When(Expr("x > ?", 1), Expr("CONCAT('x is greater than ', ?)", 2))
 
-	qb := Select().Column(caseStmt).From("table")
+	qb := Select().Column(caseStmt).From("atable")
 	sql, args, err := qb.SQL()
 
 	if err != nil {
@@ -85,7 +85,7 @@ func TestCaseWithNoVal(t *testing.T) {
 		"WHEN x = $1 THEN x is zero " +
 		"WHEN x > $2 THEN CONCAT('x is greater than ', $3) " +
 		"END " +
-		"FROM table"
+		"FROM atable"
 
 	if sql != want {
 		t.Errorf("wanted %v, got %v instead", want, sql)
@@ -103,7 +103,7 @@ func TestCaseWithExpr(t *testing.T) {
 		When("true", Expr("?", "it's true!")).
 		Else("42")
 
-	qb := Select().Column(caseStmt).From("table")
+	qb := Select().Column(caseStmt).From("atable")
 	sql, args, err := qb.SQL()
 
 	if err != nil {
@@ -114,7 +114,7 @@ func TestCaseWithExpr(t *testing.T) {
 		"WHEN true THEN $2 " +
 		"ELSE 42 " +
 		"END " +
-		"FROM table"
+		"FROM atable"
 
 	if sql != want {
 		t.Errorf("wanted %v, got %v instead", want, sql)
@@ -144,7 +144,7 @@ func TestMultipleCase(t *testing.T) {
 			Expr: caseStmtExpr,
 			As:   "case_expr",
 		}).
-		From("table")
+		From("atable")
 
 	sql, args, err := qb.SQL()
 
@@ -155,7 +155,7 @@ func TestMultipleCase(t *testing.T) {
 	want := "SELECT " +
 		"(CASE x = $1 WHEN true THEN $2 ELSE 42 END) AS case_noval, " +
 		"(CASE WHEN x = $3 THEN 'x is zero' WHEN x > $4 THEN CONCAT('x is greater than ', $5) END) AS case_expr " +
-		"FROM table"
+		"FROM atable"
 
 	if sql != want {
 		t.Errorf("wanted %v, got %v instead", want, sql)
@@ -175,7 +175,7 @@ func TestCaseWithNoWhenClause(t *testing.T) {
 	caseStmt := Case("something").
 		Else("42")
 
-	qb := Select().Column(caseStmt).From("table")
+	qb := Select().Column(caseStmt).From("atable")
 
 	_, _, err := qb.SQL()
 
