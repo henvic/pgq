@@ -14,8 +14,6 @@ type UpdateBuilder struct {
 	setClauses []setClause
 	whereParts []SQLizer
 	orderBys   []string
-	limit      string
-	offset     string
 	suffixes   []SQLizer
 }
 
@@ -82,16 +80,6 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 	if len(b.orderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
 		sql.WriteString(strings.Join(b.orderBys, ", "))
-	}
-
-	if b.limit != "" {
-		sql.WriteString(" LIMIT ")
-		sql.WriteString(b.limit)
-	}
-
-	if b.offset != "" {
-		sql.WriteString(" OFFSET ")
-		sql.WriteString(b.offset)
 	}
 
 	if len(b.suffixes) > 0 {
@@ -167,18 +155,6 @@ func (b UpdateBuilder) Where(pred any, args ...any) UpdateBuilder {
 // OrderBy adds ORDER BY expressions to the query.
 func (b UpdateBuilder) OrderBy(orderBys ...string) UpdateBuilder {
 	b.orderBys = append(b.orderBys, orderBys...)
-	return b
-}
-
-// Limit sets a LIMIT clause on the query.
-func (b UpdateBuilder) Limit(limit uint64) UpdateBuilder {
-	b.limit = fmt.Sprintf("%d", limit)
-	return b
-}
-
-// Offset sets a OFFSET clause on the query.
-func (b UpdateBuilder) Offset(offset uint64) UpdateBuilder {
-	b.offset = fmt.Sprintf("%d", offset)
 	return b
 }
 

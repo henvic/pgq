@@ -12,8 +12,6 @@ func TestDeleteBuilderSQL(t *testing.T) {
 		From("a").
 		Where("b = ?", 1).
 		OrderBy("c").
-		Limit(2).
-		Offset(3).
 		Suffix("RETURNING ?", 4)
 
 	sql, args, err := b.SQL()
@@ -23,8 +21,7 @@ func TestDeleteBuilderSQL(t *testing.T) {
 
 	want :=
 		"WITH prefix AS $1 " +
-			"DELETE FROM a WHERE b = $2 ORDER BY c LIMIT 2 OFFSET 3 " +
-			"RETURNING $3"
+			"DELETE FROM a WHERE b = $2 ORDER BY c RETURNING $3"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}

@@ -17,8 +17,6 @@ func TestUpdateBuilderSQL(t *testing.T) {
 		Set("c3", Select("a").From("b")).
 		Where("d = ?", 3).
 		OrderBy("e").
-		Limit(4).
-		Offset(5).
 		Suffix("RETURNING ?", 6)
 
 	sql, args, err := b.SQL()
@@ -33,7 +31,7 @@ func TestUpdateBuilderSQL(t *testing.T) {
 			"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
 			"c3 = (SELECT a FROM b) " +
 			"WHERE d = $6 " +
-			"ORDER BY e LIMIT 4 OFFSET 5 " +
+			"ORDER BY e " +
 			"RETURNING $7"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)

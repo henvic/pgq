@@ -12,8 +12,6 @@ type DeleteBuilder struct {
 	from       string
 	whereParts []SQLizer
 	orderBys   []string
-	limit      string
-	offset     string
 	suffixes   []SQLizer
 }
 
@@ -49,16 +47,6 @@ func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
 	if len(b.orderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
 		sql.WriteString(strings.Join(b.orderBys, ", "))
-	}
-
-	if b.limit != "" {
-		sql.WriteString(" LIMIT ")
-		sql.WriteString(b.limit)
-	}
-
-	if len(b.offset) > 0 {
-		sql.WriteString(" OFFSET ")
-		sql.WriteString(b.offset)
 	}
 
 	if len(b.suffixes) > 0 {
@@ -111,18 +99,6 @@ func (b DeleteBuilder) Where(pred any, args ...any) DeleteBuilder {
 // OrderBy adds ORDER BY expressions to the query.
 func (b DeleteBuilder) OrderBy(orderBys ...string) DeleteBuilder {
 	b.orderBys = append(b.orderBys, orderBys...)
-	return b
-}
-
-// Limit sets a LIMIT clause on the query.
-func (b DeleteBuilder) Limit(limit uint64) DeleteBuilder {
-	b.limit = fmt.Sprintf("%d", limit)
-	return b
-}
-
-// Offset sets a OFFSET clause on the query.
-func (b DeleteBuilder) Offset(offset uint64) DeleteBuilder {
-	b.offset = fmt.Sprintf("%d", offset)
 	return b
 }
 
