@@ -16,7 +16,7 @@ type UpdateBuilder struct {
 	orderBys   []string
 	limit      string
 	offset     string
-	Suffixes   []SQLizer
+	suffixes   []SQLizer
 }
 
 type setClause struct {
@@ -94,9 +94,9 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString(b.offset)
 	}
 
-	if len(b.Suffixes) > 0 {
+	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
-		args, err = appendSQL(b.Suffixes, sql, " ", args)
+		args, err = appendSQL(b.suffixes, sql, " ", args)
 		if err != nil {
 			return
 		}
@@ -189,6 +189,6 @@ func (b UpdateBuilder) Suffix(sql string, args ...any) UpdateBuilder {
 
 // SuffixExpr adds an expression to the end of the query
 func (b UpdateBuilder) SuffixExpr(expr SQLizer) UpdateBuilder {
-	b.Suffixes = append(b.Suffixes, expr)
+	b.suffixes = append(b.suffixes, expr)
 	return b
 }
