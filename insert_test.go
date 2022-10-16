@@ -34,6 +34,29 @@ func TestInsertBuilderSQL(t *testing.T) {
 	}
 }
 
+func TestInsertStruct(t *testing.T) {
+	example := struct{ What string }{What: "lol"}
+	t.Parallel()
+	b := Insert("").
+		Into("a").
+		Columns("something", "extra").
+		Values(1, example)
+
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if want := "INSERT INTO a (something,extra) VALUES ($1,$2)"; want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+
+	expectedArgs := []any{1, example}
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
+}
+
 func TestInsertBuilderSQLErr(t *testing.T) {
 	t.Parallel()
 	_, _, err := Insert("").Values(1).SQL()
