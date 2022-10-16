@@ -113,7 +113,7 @@ func appendSQL(parts []SQLizer, w io.Writer, sep string, args []any) ([]any, err
 		partSQL, partArgs, err := nestedSQL(p)
 		if err != nil {
 			return nil, err
-		} else if len(partSQL) == 0 {
+		} else if partSQL == "" {
 			continue
 		}
 

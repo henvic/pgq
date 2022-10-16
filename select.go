@@ -114,12 +114,12 @@ func (b SelectBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 		}
 	}
 
-	if len(b.limit) > 0 {
+	if b.limit != "" {
 		sql.WriteString(" LIMIT ")
 		sql.WriteString(b.limit)
 	}
 
-	if len(b.offset) > 0 {
+	if b.offset != "" {
 		sql.WriteString(" OFFSET ")
 		sql.WriteString(b.offset)
 	}

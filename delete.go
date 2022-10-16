@@ -19,7 +19,7 @@ type DeleteBuilder struct {
 
 // SQL builds the query into a SQL string and bound args.
 func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
-	if len(b.from) == 0 {
+	if b.from == "" {
 		err = fmt.Errorf("delete statements must specify a From table")
 		return
 	}
@@ -51,7 +51,7 @@ func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString(strings.Join(b.orderBys, ", "))
 	}
 
-	if len(b.limit) > 0 {
+	if b.limit != "" {
 		sql.WriteString(" LIMIT ")
 		sql.WriteString(b.limit)
 	}

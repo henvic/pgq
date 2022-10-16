@@ -47,7 +47,7 @@ func (e expr) SQL() (sql string, args []any, err error) {
 	var isql string
 	var iargs []any
 
-	for err == nil && len(ap) > 0 && len(sp) > 0 {
+	for err == nil && len(ap) > 0 && sp != "" {
 		i := strings.Index(sp, "?")
 		if i < 0 {
 			// no more placeholders

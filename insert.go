@@ -22,7 +22,7 @@ type InsertBuilder struct {
 
 // SQL builds the query into a SQL string and bound args.
 func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
-	if len(b.into) == 0 {
+	if b.into == "" {
 		err = errors.New("insert statements must specify a table")
 		return
 	}

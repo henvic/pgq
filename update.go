@@ -25,7 +25,7 @@ type setClause struct {
 }
 
 func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
-	if len(b.table) == 0 {
+	if b.table == "" {
 		err = fmt.Errorf("update statements must specify a table")
 		return
 	}
@@ -84,12 +84,12 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString(strings.Join(b.orderBys, ", "))
 	}
 
-	if len(b.limit) > 0 {
+	if b.limit != "" {
 		sql.WriteString(" LIMIT ")
 		sql.WriteString(b.limit)
 	}
 
-	if len(b.offset) > 0 {
+	if b.offset != "" {
 		sql.WriteString(" OFFSET ")
 		sql.WriteString(b.offset)
 	}
