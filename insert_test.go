@@ -7,30 +7,93 @@ import (
 
 func TestInsertBuilderSQL(t *testing.T) {
 	t.Parallel()
-	b := Insert("").
-		Prefix("WITH prefix AS ?", 0).
-		Into("a").
-		Columns("b", "c").
-		Values(1, 2).
-		Values(3, Expr("? + 1", 4)).
-		Suffix("RETURNING ?", 5)
-
-	sql, args, err := b.SQL()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+	testCases := []struct {
+		name     string
+		b        InsertBuilder
+		wantSQL  string
+		wantArgs []any
+		wantErr  error
+	}{
+		{
+			name: "with_suffix",
+			b: Insert("").
+				Prefix("WITH prefix AS ?", 0).
+				Into("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, Expr("? + 1", 4)).
+				Suffix("RETURNING ?", 5),
+			wantSQL: "WITH prefix AS $1 " +
+				"INSERT INTO a (b,c) VALUES ($2,$3),($4,$5 + 1) " +
+				"RETURNING $6",
+			wantArgs: []any{0, 1, 2, 3, 4, 5},
+		},
+		{
+			name: "returning",
+			b: Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, Expr("? + 1", 4)).
+				Returning("x"),
+			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING x",
+			wantArgs: []any{1, 2, 3, 4},
+		},
+		{
+			name: "returning_2",
+			b: Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, Expr("? + 1", 4)).
+				Returning("x", "y"),
+			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING x, y",
+			wantArgs: []any{1, 2, 3, 4},
+		},
+		{
+			name: "returning_3",
+			b: Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, Expr("? + 1", 4)).
+				Returning("x", "y", "z"),
+			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING x, y, z",
+			wantArgs: []any{1, 2, 3, 4},
+		},
+		{
+			name: "returning_3_multi_calls",
+			b: Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, Expr("? + 1", 4)).
+				Returning("x", "y").Returning("z"),
+			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING x, y, z",
+			wantArgs: []any{1, 2, 3, 4},
+		},
+		{
+			name: "returning_select",
+			b: Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, Expr("? + 1", 4)).
+				ReturningSelect(Select("abc").From("atable"), "something"),
+			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING (SELECT abc FROM atable) AS something",
+			wantArgs: []any{1, 2, 3, 4},
+		},
 	}
-
-	want :=
-		"WITH prefix AS $1 " +
-			"INSERT INTO a (b,c) VALUES ($2,$3),($4,$5 + 1) " +
-			"RETURNING $6"
-	if want != sql {
-		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
-	}
-
-	expectedArgs := []any{0, 1, 2, 3, 4, 5}
-	if !reflect.DeepEqual(expectedArgs, args) {
-		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != tc.wantErr {
+				t.Errorf("expected error to be %v, got %v instead", tc.wantErr, err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("wanted %v, got %v instead", tc.wantArgs, args)
+			}
+		})
 	}
 }
 

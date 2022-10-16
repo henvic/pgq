@@ -14,6 +14,7 @@ type UpdateBuilder struct {
 	setClauses []setClause
 	whereParts []SQLizer
 	orderBys   []string
+	returning  []SQLizer
 	suffixes   []SQLizer
 }
 
@@ -80,6 +81,14 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 	if len(b.orderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
 		sql.WriteString(strings.Join(b.orderBys, ", "))
+	}
+
+	if len(b.returning) > 0 {
+		sql.WriteString(" RETURNING ")
+		args, err = appendSQL(b.returning, sql, ", ", args)
+		if err != nil {
+			return
+		}
 	}
 
 	if len(b.suffixes) > 0 {
@@ -155,6 +164,22 @@ func (b UpdateBuilder) Where(pred any, args ...any) UpdateBuilder {
 // OrderBy adds ORDER BY expressions to the query.
 func (b UpdateBuilder) OrderBy(orderBys ...string) UpdateBuilder {
 	b.orderBys = append(b.orderBys, orderBys...)
+	return b
+}
+
+// Returning adds RETURNING expressions to the query.
+func (b UpdateBuilder) Returning(columns ...string) UpdateBuilder {
+	parts := make([]SQLizer, 0, len(columns))
+	for _, col := range columns {
+		parts = append(parts, newPart(col))
+	}
+	b.returning = append(b.returning, parts...)
+	return b
+}
+
+// ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
+func (b UpdateBuilder) ReturningSelect(from SelectBuilder, alias string) UpdateBuilder {
+	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }
 

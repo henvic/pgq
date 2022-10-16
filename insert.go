@@ -16,6 +16,7 @@ type InsertBuilder struct {
 	into          string
 	columns       []string
 	values        [][]any
+	returning     []SQLizer
 	suffixes      []SQLizer
 	selectBuilder *SelectBuilder
 }
@@ -65,6 +66,14 @@ func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
 	}
 	if err != nil {
 		return
+	}
+
+	if len(b.returning) > 0 {
+		sql.WriteString(" RETURNING ")
+		args, err = appendSQL(b.returning, sql, ", ", args)
+		if err != nil {
+			return
+		}
 	}
 
 	if len(b.suffixes) > 0 {
@@ -162,6 +171,22 @@ func (b InsertBuilder) Columns(columns ...string) InsertBuilder {
 // Values adds a single row's values to the query.
 func (b InsertBuilder) Values(values ...any) InsertBuilder {
 	b.values = append(b.values, values)
+	return b
+}
+
+// Returning adds RETURNING expressions to the query.
+func (b InsertBuilder) Returning(columns ...string) InsertBuilder {
+	parts := make([]SQLizer, 0, len(columns))
+	for _, col := range columns {
+		parts = append(parts, newPart(col))
+	}
+	b.returning = append(b.returning, parts...)
+	return b
+}
+
+// ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
+func (b InsertBuilder) ReturningSelect(from SelectBuilder, alias string) InsertBuilder {
+	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }
 

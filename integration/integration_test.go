@@ -308,6 +308,33 @@ func TestValidQueries(t *testing.T) {
 			"INSERT INTO table2 (field1) SELECT field1 FROM table1 WHERE field1 = $1",
 		},
 		{
+			"insert_with_returning",
+			pgq.Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, pgq.Expr("? + 1", 4)).
+				Returning("abc"),
+			"INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING abc",
+		},
+		{
+			"insert_with_returning_multi",
+			pgq.Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, pgq.Expr("? + 1", 4)).
+				Returning("abc", "def"),
+			"INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING abc, def",
+		},
+		{
+			"insert_with_returning_table_row",
+			pgq.Insert("a").
+				Columns("b", "c").
+				Values(1, 2).
+				Values(3, pgq.Expr("? + 1", 4)).
+				ReturningSelect(pgq.Select("abc").From("atable"), "something"),
+			"INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING (SELECT abc FROM atable) AS something",
+		},
+		{
 			"select_from_select",
 			func() sqler {
 				subQ := pgq.Select("c").From("d").Where(pgq.Eq{"i": 0})

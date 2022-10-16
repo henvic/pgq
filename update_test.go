@@ -7,7 +7,7 @@ import (
 
 func TestUpdateBuilderSQL(t *testing.T) {
 	t.Parallel()
-	b := Update("").
+	beginning := Update("").
 		Prefix("WITH prefix AS ?", 0).
 		Table("a").
 		Set("b", Expr("? + 1", 1)).
@@ -16,30 +16,110 @@ func TestUpdateBuilderSQL(t *testing.T) {
 		Set("c2", Case().When("a = 2", Expr("?", "foo")).When("a = 3", Expr("?", "bar"))).
 		Set("c3", Select("a").From("b")).
 		Where("d = ?", 3).
-		OrderBy("e").
-		Suffix("RETURNING ?", 6)
+		OrderBy("e")
 
-	sql, args, err := b.SQL()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+	testCases := []struct {
+		name     string
+		b        UpdateBuilder
+		wantSQL  string
+		wantArgs []any
+		wantErr  error
+	}{
+		{
+			name: "with_suffix",
+			b:    beginning.Suffix("RETURNING ?", 6),
+			wantSQL: "WITH prefix AS $1 " +
+				"UPDATE a SET b = $2 + 1, c = $3, " +
+				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
+				"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
+				"c3 = (SELECT a FROM b) " +
+				"WHERE d = $6 " +
+				"ORDER BY e " +
+				"RETURNING $7",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3, 6},
+		},
+		{
+			name: "returning",
+			b:    beginning.Returning("x"),
+			wantSQL: "WITH prefix AS $1 " +
+				"UPDATE a SET b = $2 + 1, c = $3, " +
+				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
+				"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
+				"c3 = (SELECT a FROM b) " +
+				"WHERE d = $6 " +
+				"ORDER BY e " +
+				"RETURNING x",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
+		},
+		{
+			name: "returning_2",
+			b:    beginning.Returning("x", "y"),
+			wantSQL: "WITH prefix AS $1 " +
+				"UPDATE a SET b = $2 + 1, c = $3, " +
+				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
+				"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
+				"c3 = (SELECT a FROM b) " +
+				"WHERE d = $6 " +
+				"ORDER BY e " +
+				"RETURNING x, y",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
+		},
+		{
+			name: "returning_3",
+			b:    beginning.Returning("x", "y", "z"),
+			wantSQL: "WITH prefix AS $1 " +
+				"UPDATE a SET b = $2 + 1, c = $3, " +
+				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
+				"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
+				"c3 = (SELECT a FROM b) " +
+				"WHERE d = $6 " +
+				"ORDER BY e " +
+				"RETURNING x, y, z",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
+		},
+		{
+			name: "returning_3_multi_calls",
+			b:    beginning.Returning("x", "y").Returning("z"),
+			wantSQL: "WITH prefix AS $1 " +
+				"UPDATE a SET b = $2 + 1, c = $3, " +
+				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
+				"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
+				"c3 = (SELECT a FROM b) " +
+				"WHERE d = $6 " +
+				"ORDER BY e " +
+				"RETURNING x, y, z",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
+		},
+		{
+			name: "returning_select",
+			b:    beginning.ReturningSelect(Select("abc").From("atable"), "something"),
+			wantSQL: "WITH prefix AS $1 " +
+				"UPDATE a SET b = $2 + 1, c = $3, " +
+				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
+				"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
+				"c3 = (SELECT a FROM b) " +
+				"WHERE d = $6 " +
+				"ORDER BY e " +
+				"RETURNING (SELECT abc FROM atable) AS something",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
+		},
 	}
 
-	want :=
-		"WITH prefix AS $1 " +
-			"UPDATE a SET b = $2 + 1, c = $3, " +
-			"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
-			"c2 = CASE WHEN a = 2 THEN $4 WHEN a = 3 THEN $5 END, " +
-			"c3 = (SELECT a FROM b) " +
-			"WHERE d = $6 " +
-			"ORDER BY e " +
-			"RETURNING $7"
-	if want != sql {
-		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
-	}
-
-	expectedArgs := []any{0, 1, 2, "foo", "bar", 3, 6}
-	if !reflect.DeepEqual(expectedArgs, args) {
-		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != tc.wantErr {
+				t.Errorf("expected error to be %v, got %v instead", tc.wantErr, err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("wanted %v, got %v instead", tc.wantArgs, args)
+			}
+		})
 	}
 }
 

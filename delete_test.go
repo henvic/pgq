@@ -7,28 +7,77 @@ import (
 
 func TestDeleteBuilderSQL(t *testing.T) {
 	t.Parallel()
-	b := Delete("").
+	beginning := Delete("").
 		Prefix("WITH prefix AS ?", 0).
 		From("a").
 		Where("b = ?", 1).
-		OrderBy("c").
-		Suffix("RETURNING ?", 4)
+		OrderBy("c")
 
-	sql, args, err := b.SQL()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+	testCases := []struct {
+		name     string
+		b        DeleteBuilder
+		wantSQL  string
+		wantArgs []any
+		wantErr  error
+	}{
+		{
+			name: "with_suffix",
+			b: Delete("").
+				Prefix("WITH prefix AS ?", 0).
+				From("a").
+				Where("b = ?", 1).
+				OrderBy("c").
+				Suffix("RETURNING ?", 4),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING $3",
+			wantArgs: []any{0, 1, 4},
+		},
+		{
+			name:     "returning",
+			b:        beginning.Returning("x"),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING x",
+			wantArgs: []any{0, 1},
+		},
+		{
+			name:     "returning_2",
+			b:        beginning.Returning("x", "y"),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING x, y",
+			wantArgs: []any{0, 1},
+		},
+		{
+			name:     "returning_3",
+			b:        beginning.Returning("x", "y", "z"),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING x, y, z",
+			wantArgs: []any{0, 1},
+		},
+		{
+			name:     "returning_3_multi_calls",
+			b:        beginning.Returning("x", "y").Returning("z"),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING x, y, z",
+			wantArgs: []any{0, 1},
+		},
+		{
+			name:     "returning_select",
+			b:        beginning.ReturningSelect(Select("abc").From("atable"), "something"),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING (SELECT abc FROM atable) AS something",
+			wantArgs: []any{0, 1},
+		},
 	}
 
-	want :=
-		"WITH prefix AS $1 " +
-			"DELETE FROM a WHERE b = $2 ORDER BY c RETURNING $3"
-	if want != sql {
-		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
-	}
-
-	expectedArgs := []any{0, 1, 4}
-	if !reflect.DeepEqual(expectedArgs, args) {
-		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != tc.wantErr {
+				t.Errorf("expected error to be %v, got %v instead", tc.wantErr, err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("wanted %v, got %v instead", tc.wantArgs, args)
+			}
+		})
 	}
 }
 
