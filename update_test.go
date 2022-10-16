@@ -103,6 +103,28 @@ func TestUpdateBuilderSQL(t *testing.T) {
 				"RETURNING (SELECT abc FROM atable) AS something",
 			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
 		},
+		{
+			name: "from",
+			b: Update("employees").Set("sales_count", Expr("sales_count + 1")).From("accounts").
+				Where("accounts.name = ?", "Acme Corporation").
+				Where("employees.id = accounts.sales_person"),
+			wantSQL: "UPDATE employees SET sales_count = sales_count + 1 FROM accounts " +
+				"WHERE accounts.name = $1 " +
+				"AND employees.id = accounts.sales_person",
+			wantArgs: []any{"Acme Corporation"},
+		},
+		{
+			name: "from_select",
+			b: Update("employees").Set("sales_count", Expr("sales_count + 1")).FromSelect(
+				Select("name").From("accounts"), "acc",
+			).
+				Where("acc.name = ?", "Acme Corporation").
+				Where("employees.id = acc.sales_person"),
+			wantSQL: "UPDATE employees SET sales_count = sales_count + 1 " +
+				"FROM (SELECT name FROM accounts) " +
+				"AS acc WHERE acc.name = $1 AND employees.id = acc.sales_person",
+			wantArgs: []any{"Acme Corporation"},
+		},
 	}
 
 	for _, tc := range testCases {

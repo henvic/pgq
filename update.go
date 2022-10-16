@@ -12,6 +12,7 @@ type UpdateBuilder struct {
 	prefixes   []SQLizer
 	table      string
 	setClauses []setClause
+	fromParts  []SQLizer
 	whereParts []SQLizer
 	orderBys   []string
 	returning  []SQLizer
@@ -69,6 +70,14 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 		setSQLs[i] = fmt.Sprintf("%s = %s", setClause.column, valSQL)
 	}
 	sql.WriteString(strings.Join(setSQLs, ", "))
+
+	if len(b.fromParts) > 0 {
+		sql.WriteString(" FROM ")
+		args, err = appendSQL(b.fromParts, sql, ", ", args)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(b.whereParts) > 0 {
 		sql.WriteString(" WHERE ")
@@ -150,6 +159,26 @@ func (b UpdateBuilder) SetMap(clauses map[string]any) UpdateBuilder {
 			b = b.Set(key, val)
 		}
 	}
+	return b
+}
+
+// From adds FROM expressions to the query.
+//
+// A table expression allowing columns from other tables to appear in the WHERE condition and update expressions.
+// This uses the same syntax as the FROM clause of a SELECT statement.
+// Do not repeat the target table unless you intend a self-join (in which case, you must use an alias).
+func (b UpdateBuilder) From(items ...string) UpdateBuilder {
+	parts := make([]SQLizer, 0, len(items))
+	for _, str := range items {
+		parts = append(parts, newPart(str))
+	}
+	b.fromParts = append(b.fromParts, parts...)
+	return b
+}
+
+// FromSelect adds FROM expressions to the query similar to From, but takes a Select statement.
+func (b UpdateBuilder) FromSelect(from SelectBuilder, alias string) UpdateBuilder {
+	b.fromParts = append(b.fromParts, Alias{Expr: from, As: alias})
 	return b
 }
 
