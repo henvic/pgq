@@ -10,6 +10,7 @@ import (
 type DeleteBuilder struct {
 	prefixes   []SQLizer
 	from       string
+	usingParts []SQLizer
 	whereParts []SQLizer
 	orderBys   []string
 	returning  []SQLizer
@@ -37,6 +38,14 @@ func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
 	sql.WriteString("DELETE FROM ")
 	sql.WriteString(b.from)
 
+	if len(b.usingParts) > 0 {
+		sql.WriteString(" USING ")
+		args, err = appendSQL(b.usingParts, sql, ", ", args)
+		if err != nil {
+			return
+		}
+	}
+
 	if len(b.whereParts) > 0 {
 		sql.WriteString(" WHERE ")
 		args, err = appendSQL(b.whereParts, sql, " AND ", args)
@@ -57,6 +66,7 @@ func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
 			return
 		}
 	}
+
 	if len(b.suffixes) > 0 {
 		sql.WriteString(" ")
 		args, err = appendSQL(b.suffixes, sql, " ", args)
@@ -93,6 +103,26 @@ func (b DeleteBuilder) PrefixExpr(expr SQLizer) DeleteBuilder {
 // From sets the table to be deleted from.
 func (b DeleteBuilder) From(from string) DeleteBuilder {
 	b.from = from
+	return b
+}
+
+// Using adds USING expressions to the query.
+//
+// A table expression allowing columns from other tables to appear in the WHERE condition.
+// This uses the same syntax as the FROM clause of a SELECT statement.
+// Do not repeat the target table unless you intend a self-join (in which case, you must use an alias).
+func (b DeleteBuilder) Using(items ...string) DeleteBuilder {
+	parts := make([]SQLizer, 0, len(items))
+	for _, str := range items {
+		parts = append(parts, newPart(str))
+	}
+	b.usingParts = append(b.usingParts, parts...)
+	return b
+}
+
+// UsingSelect adds USING expressions to the query similar to Using, but takes a Select statement.
+func (b DeleteBuilder) UsingSelect(from SelectBuilder, alias string) DeleteBuilder {
+	b.usingParts = append(b.usingParts, Alias{Expr: from, As: alias})
 	return b
 }
 

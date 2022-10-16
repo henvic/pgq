@@ -61,6 +61,18 @@ func TestDeleteBuilderSQL(t *testing.T) {
 			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING (SELECT abc FROM atable) AS something",
 			wantArgs: []any{0, 1},
 		},
+		{
+			name:     "delete_using",
+			b:        Delete("films").Using("producers").Where("producer_id = producers.id").Where("producers.name = ?", "foo"),
+			wantSQL:  "DELETE FROM films USING producers WHERE producer_id = producers.id AND producers.name = $1",
+			wantArgs: []any{"foo"},
+		},
+		{
+			name:     "delete_using_select",
+			b:        Delete("films").UsingSelect(Select("id").From("producers").Where("name = ?", "foo"), "p"),
+			wantSQL:  "DELETE FROM films USING (SELECT id FROM producers WHERE name = $1) AS p",
+			wantArgs: []any{"foo"},
+		},
 	}
 
 	for _, tc := range testCases {
