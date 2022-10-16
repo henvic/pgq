@@ -42,10 +42,11 @@ jobs:
     - uses: actions/setup-go@v1
       with:
         go-version: '1.19.x'
-    - name: Run Postgres tests
-      # TODO(henvic): Skip generating code coverage when not sending it to Coveralls to speed up testing.
-      continue-on-error: ${{ matrix.os != 'ubuntu-latest' || matrix.go != '1.19.x' }}
+    - name: Run unit tests
       run: go test -v -race -count 1 -covermode atomic -coverprofile=profile.cov ./...
+    - name: Run Postgres tests
+      working-directory: integration
+      run: go test -v
     - name: Code coverage
       if: ${{ github.event_name != 'pull_request' && matrix.go == '1.19.x' }}
       uses: shogo82148/actions-goveralls@v1
