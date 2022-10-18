@@ -12,7 +12,7 @@ import (
 // InsertBuilder builds SQL INSERT statements.
 type InsertBuilder struct {
 	prefixes      []SQLizer
-	replace       bool
+	verb          string
 	into          string
 	columns       []string
 	values        [][]any
@@ -43,18 +43,13 @@ func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString(" ")
 	}
 
-	if !b.replace {
-		sql.WriteString("INSERT ")
-	} else {
-		sql.WriteString("REPLACE ")
-	}
-
-	sql.WriteString("INTO ")
+	sql.WriteString(b.verb)
+	sql.WriteString(" INTO ")
 	sql.WriteString(b.into)
-	sql.WriteString(" ")
+	sql.WriteRune(' ')
 
 	if len(b.columns) > 0 {
-		sql.WriteString("(")
+		sql.WriteRune('(')
 		sql.WriteString(strings.Join(b.columns, ","))
 		sql.WriteString(") ")
 	}

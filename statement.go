@@ -50,7 +50,7 @@ func Select(columns ...string) SelectBuilder {
 //
 // See InsertBuilder.Into.
 func Insert(into string) InsertBuilder {
-	return InsertBuilder{into: into}
+	return InsertBuilder{into: into, verb: "INSERT"}
 }
 
 // Replace returns a new InsertBuilder with the statement keyword set to
@@ -58,9 +58,15 @@ func Insert(into string) InsertBuilder {
 //
 // See InsertBuilder.Into.
 func Replace(into string) InsertBuilder {
-	builder := InsertBuilder{}
-	builder.replace = true
-	return builder.Into(into)
+	return InsertBuilder{into: into, verb: "REPLACE"}
+}
+
+// Upsert returns a new InsertBuilder with the statement keyword set to
+// "UPSERT" and with the given table name.
+//
+// See InsertBuilder.Into.
+func Upsert(into string) InsertBuilder {
+	return InsertBuilder{into: into, verb: "UPSERT"}
 }
 
 // Update returns a new UpdateBuilder with the given table name.
