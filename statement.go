@@ -59,7 +59,7 @@ func Insert(into string) InsertBuilder {
 // See InsertBuilder.Into.
 func Replace(into string) InsertBuilder {
 	builder := InsertBuilder{}
-	builder.replace = true
+	builder.verb = "REPLACE"
 	return builder.Into(into)
 }
 

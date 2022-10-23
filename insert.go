@@ -12,13 +12,19 @@ import (
 // InsertBuilder builds SQL INSERT statements.
 type InsertBuilder struct {
 	prefixes      []SQLizer
-	replace       bool
+	verb          string
 	into          string
 	columns       []string
 	values        [][]any
 	returning     []SQLizer
 	suffixes      []SQLizer
 	selectBuilder *SelectBuilder
+}
+
+// Verb to be used for the operation (default: INSERT).
+func (b InsertBuilder) Verb(v string) InsertBuilder {
+	b.verb = v
+	return b
 }
 
 // SQL builds the query into a SQL string and bound args.
@@ -43,10 +49,10 @@ func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
 		sql.WriteString(" ")
 	}
 
-	if !b.replace {
-		sql.WriteString("INSERT ")
+	if b.verb != "" {
+		sql.WriteString(b.verb + " ")
 	} else {
-		sql.WriteString("REPLACE ")
+		sql.WriteString("INSERT ")
 	}
 
 	sql.WriteString("INTO ")
