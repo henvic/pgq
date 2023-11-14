@@ -1,10 +1,11 @@
 name: Tests
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-  push:
-    branches:
-      - main
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
 permissions:
   contents: read
   pull-requests: read
@@ -13,7 +14,7 @@ jobs:
   postgres-test:
     strategy:
       matrix:
-        go: [1.19.x, 1.18.x] # when updating versions, update it below too.
+        go: [1.21.x, 1.20.x] # when updating versions, update it below too.
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -38,17 +39,17 @@ jobs:
       PGPASSWORD: postgres
       PGDATABASE: test_pgq
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-go@v1
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v4
       with:
-        go-version: '1.19.x'
+        go-version: '1.21.x'
     - name: Run unit tests
       run: go test -v -race -count 1 -covermode atomic -coverprofile=profile.cov ./...
     - name: Run Postgres tests
       working-directory: integration
       run: go test -v
     - name: Code coverage
-      if: ${{ github.event_name != 'pull_request' && matrix.go == '1.19.x' }}
+      if: ${{ github.event_name != 'pull_request' && matrix.go == '1.21.x' }}
       uses: shogo82148/actions-goveralls@v1
       with:
         path-to-profile: profile.cov
