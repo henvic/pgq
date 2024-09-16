@@ -25,6 +25,16 @@ type setClause struct {
 }
 
 func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = b.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+
+	sqlStr, err = dollarPlaceholder(sqlStr)
+	return
+}
+
+func (b UpdateBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	if b.table == "" {
 		err = fmt.Errorf("update statements must specify a table")
 		return
@@ -108,7 +118,7 @@ func (b UpdateBuilder) SQL() (sqlStr string, args []any, err error) {
 		}
 	}
 
-	sqlStr, err = dollarPlaceholder(sql.String())
+	sqlStr = sql.String()
 	return
 }
 

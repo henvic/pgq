@@ -19,6 +19,16 @@ type DeleteBuilder struct {
 
 // SQL builds the query into a SQL string and bound args.
 func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = b.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+
+	sqlStr, err = dollarPlaceholder(sqlStr)
+	return
+}
+
+func (b DeleteBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	if b.from == "" {
 		err = fmt.Errorf("delete statements must specify a From table")
 		return
@@ -75,7 +85,7 @@ func (b DeleteBuilder) SQL() (sqlStr string, args []any, err error) {
 		}
 	}
 
-	sqlStr, err = dollarPlaceholder(sql.String())
+	sqlStr = sql.String()
 	return
 }
 

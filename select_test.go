@@ -455,3 +455,35 @@ func TestRemoveColumns(t *testing.T) {
 		t.Errorf("expected %q, got %v", want, sql)
 	}
 }
+
+func TestSelectBuilder_PrefixExpr_NestedUpdateDollar(t *testing.T) {
+	t.Parallel()
+	nestedBuilder := Update("foo").Prefix("WITH updated AS (").
+		Set("x", 42).Where("x = ?", 41).Returning("*").Suffix(")")
+	outerSQL, _, err := Select("*").
+		From("updated").Where("y = ?", 11).PrefixExpr(nestedBuilder).SQL()
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	want := "WITH updated AS ( UPDATE foo SET x = $1 WHERE x = $2 RETURNING * ) SELECT * FROM updated WHERE y = $3"
+	if outerSQL != want {
+		t.Errorf("expected %q, got %v", want, outerSQL)
+	}
+}
+
+func TestSelectBuilder_PrefixExpr_NestedDeleteDollar(t *testing.T) {
+	t.Parallel()
+	nestedBuilder := Delete("foo").Prefix("WITH deleted AS (").
+		Where("x = ?", 41).Returning("*").Suffix(")")
+	outerSQL, _, err := Select("*").
+		From("deleted").Where("y = ?", 11).PrefixExpr(nestedBuilder).SQL()
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	want := "WITH deleted AS ( DELETE FROM foo WHERE x = $1 RETURNING * ) SELECT * FROM deleted WHERE y = $2"
+	if outerSQL != want {
+		t.Errorf("expected %q, got %v", want, outerSQL)
+	}
+}
