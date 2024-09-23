@@ -14,7 +14,7 @@ jobs:
   postgres-test:
     strategy:
       matrix:
-        go: [1.21.x, 1.20.x] # when updating versions, update it below too.
+        go: [1.23.x, 1.22.x] # when updating versions, update it below too.
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -40,16 +40,18 @@ jobs:
       PGDATABASE: test_pgq
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
-        go-version: '1.21.x'
+        go-version: '1.23.x'
     - name: Run unit tests
-      run: go test -v -race -count 1 -covermode atomic -coverprofile=profile.cov ./...
+      run: |
+        go test -v -race -count 1 -covermode atomic -coverprofile=profile.cov ./...
+        sed -i '/^github\.com\/henvic\/httpretty\/example\//d' profile.cov
     - name: Run Postgres tests
       working-directory: integration
       run: go test -v
     - name: Code coverage
-      if: ${{ github.event_name != 'pull_request' && matrix.go == '1.21.x' }}
+      if: ${{ github.event_name != 'pull_request' && matrix.go == '1.23.x' }}
       uses: shogo82148/actions-goveralls@v1
       with:
         path-to-profile: profile.cov
