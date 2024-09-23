@@ -16,7 +16,7 @@ sql, args, err := pgq.Update("employees").
 	Set("salary_bonus", pgq.Expr("salary_bonus + 1000")).
 	From("accounts").
 	Where("accounts.team = ?", "engineering").
-	Returning("id", "name", "salary")
+	Returning("id", "name", "salary").SQL()
 
 if err != nil {
 	panic(err) // bug: this should never happen.
