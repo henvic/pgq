@@ -288,6 +288,12 @@ func (b SelectBuilder) Having(pred any, rest ...any) SelectBuilder {
 	return b
 }
 
+// RemoveOrderBy removes ORDER BY clause.
+func (b SelectBuilder) RemoveOrderBy() SelectBuilder {
+	b.orderByParts = nil
+	return b
+}
+
 // OrderByClause adds ORDER BY clause to the query.
 func (b SelectBuilder) OrderByClause(pred any, args ...any) SelectBuilder {
 	b.orderByParts = append(b.orderByParts, newPart(pred, args...))
