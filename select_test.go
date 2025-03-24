@@ -38,6 +38,8 @@ func TestSelectBuilderSQL(t *testing.T) {
 		Where(Or{Expr("j = ?", 10), And{Eq{"k": 11}, Expr("true")}}).
 		GroupBy("l").
 		Having("m = n").
+		OrderBy("a ASC").
+		RemoveOrderBy().
 		OrderByClause("? DESC", 1).
 		OrderBy("o ASC", "p DESC").
 		Limit(12).
