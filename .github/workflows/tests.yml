@@ -14,7 +14,7 @@ jobs:
   postgres-test:
     strategy:
       matrix:
-        go: [1.23.x, 1.22.x] # when updating versions, update it below too.
+        go: [1.24.x, 1.23.x] # when updating versions, update it below too.
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -42,7 +42,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
       with:
-        go-version: '1.23.x'
+        go-version: '1.24.x'
     - name: Run unit tests
       run: |
         go test -v -race -count 1 -covermode atomic -coverprofile=profile.cov ./...
@@ -51,7 +51,7 @@ jobs:
       working-directory: integration
       run: go test -v
     - name: Code coverage
-      if: ${{ github.event_name != 'pull_request' && matrix.go == '1.23.x' }}
+      if: ${{ github.event_name != 'pull_request' && matrix.go == '1.24.x' }}
       uses: shogo82148/actions-goveralls@v1
       with:
         path-to-profile: profile.cov

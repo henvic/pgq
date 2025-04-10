@@ -1,3 +1,3 @@
 module github.com/henvic/pgq
 
-go 1.22
+go 1.23
