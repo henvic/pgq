@@ -51,16 +51,15 @@ func TestSelectBuilderSQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want :=
-		"WITH prefix AS $1 " +
-			"SELECT DISTINCT a, b, c, IF(d IN ($2,$3,$4), 1, 0) as stat_column, a > $5, " +
-			"(b = ANY ($6)) AS b_alias, " +
-			"(SELECT aa, bb FROM dd) AS subq " +
-			"FROM e " +
-			"CROSS JOIN j1 JOIN j2 LEFT JOIN j3 RIGHT JOIN j4 INNER JOIN j5 CROSS JOIN j6 " +
-			"WHERE f = $7 AND g = $8 AND h = $9 AND i = ANY ($10) AND (j = $11 OR (k = $12 AND true)) " +
-			"GROUP BY l HAVING m = n ORDER BY $13 DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
-			"FETCH FIRST $14 ROWS ONLY"
+	want := "WITH prefix AS $1 " +
+		"SELECT DISTINCT a, b, c, IF(d IN ($2,$3,$4), 1, 0) as stat_column, a > $5, " +
+		"(b = ANY ($6)) AS b_alias, " +
+		"(SELECT aa, bb FROM dd) AS subq " +
+		"FROM e " +
+		"CROSS JOIN j1 JOIN j2 LEFT JOIN j3 RIGHT JOIN j4 INNER JOIN j5 CROSS JOIN j6 " +
+		"WHERE f = $7 AND g = $8 AND h = $9 AND i = ANY ($10) AND (j = $11 OR (k = $12 AND true)) " +
+		"GROUP BY l HAVING m = n ORDER BY $13 DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
+		"FETCH FIRST $14 ROWS ONLY"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
@@ -203,7 +202,6 @@ func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 func TestSelectWithOptions(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Options("ALL").SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -215,7 +213,6 @@ func TestSelectWithOptions(t *testing.T) {
 func TestSelectWithRemoveLimit(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Limit(10).RemoveLimit().SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -227,7 +224,6 @@ func TestSelectWithRemoveLimit(t *testing.T) {
 func TestSelectWithRemoveOffset(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Offset(10).RemoveOffset().SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -242,7 +238,6 @@ func TestSelectBuilderNestedSelectDollar(t *testing.T) {
 		From("bar").Where("y = ?", 42).Suffix(")")
 	outerSQL, _, err := Select("*").
 		From("foo").Where("x = ?").Where(nestedBuilder).SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -464,7 +459,6 @@ func TestSelectBuilder_PrefixExpr_NestedUpdateDollar(t *testing.T) {
 		Set("x", 42).Where("x = ?", 41).Returning("*").Suffix(")")
 	outerSQL, _, err := Select("*").
 		From("updated").Where("y = ?", 11).PrefixExpr(nestedBuilder).SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -480,7 +474,6 @@ func TestSelectBuilder_PrefixExpr_NestedDeleteDollar(t *testing.T) {
 		Where("x = ?", 41).Returning("*").Suffix(")")
 	outerSQL, _, err := Select("*").
 		From("deleted").Where("y = ?", 11).PrefixExpr(nestedBuilder).SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
