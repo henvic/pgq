@@ -489,3 +489,96 @@ func TestSelectBuilder_PrefixExpr_NestedDeleteDollar(t *testing.T) {
 		t.Errorf("expected %q, got %v", want, outerSQL)
 	}
 }
+
+func TestSelectBuilderWith(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		b        SelectBuilder
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name: "with_cte",
+			b: Select("region", "product", "SUM(quantity) AS product_units", "SUM(amount) AS product_sales").
+				With("regional_sales", Select("region", "SUM(amount) AS total_sales").
+					From("orders").
+					GroupBy("region")).
+				With("top_regions", Select("region").
+					From("regional_sales").
+					Where("total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)")).
+				From("orders").
+				Where("region IN (SELECT region FROM top_regions)").
+				GroupBy("region", "product"),
+			wantSQL: "WITH regional_sales AS (SELECT region, SUM(amount) AS total_sales FROM orders GROUP BY region), " +
+				"top_regions AS (SELECT region FROM regional_sales WHERE total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)) " +
+				"SELECT region, product, SUM(quantity) AS product_units, SUM(amount) AS product_sales " +
+				"FROM orders WHERE region IN (SELECT region FROM top_regions) GROUP BY region, product",
+			wantArgs: nil,
+		},
+		{
+			name: "cte with args",
+			b: Select("id", "total").
+				With("totals", Select("id", "SUM(amount) AS total").From("orders").Where("amount > ?", 100).GroupBy("id")).
+				From("totals").
+				Where("total > ?", 500),
+			wantSQL: "WITH totals AS (SELECT id, SUM(amount) AS total FROM orders WHERE amount > $1 GROUP BY id) " +
+				"SELECT id, total FROM totals WHERE total > $2",
+			wantArgs: []any{100, 500},
+		},
+		{
+			name: "cte body is insert returning",
+			b: Select("*").
+				With("inserted", Insert("orders").
+					Columns("region", "amount").
+					Values("West", 42).
+					Returning("id")).
+				From("inserted"),
+			wantSQL: "WITH inserted AS (INSERT INTO orders (region,amount) VALUES ($1,$2) RETURNING id) " +
+				"SELECT * FROM inserted",
+			wantArgs: []any{"West", 42},
+		},
+		{
+			name: "cte body is update returning",
+			b: Select("*").
+				With("moved", Update("old_table").Set("status", "archived").Where("id = ?", 42).Returning("*")).
+				From("moved"),
+			wantSQL: "WITH moved AS (UPDATE old_table SET status = $1 WHERE id = $2 RETURNING *) " +
+				"SELECT * FROM moved",
+			wantArgs: []any{"archived", 42},
+		},
+		{
+			name: "cte body is delete returning",
+			b: Select("*").
+				With("removed", Delete("old_table").Where("id = ?", 7).Returning("*")).
+				From("removed"),
+			wantSQL: "WITH removed AS (DELETE FROM old_table WHERE id = $1 RETURNING *) " +
+				"SELECT * FROM removed",
+			wantArgs: []any{7},
+		},
+		{
+			name: "cte with prefix coexist",
+			b: Select("*").
+				With("c", Select("id").From("t").Where("x = ?", 1)).
+				Prefix("/* hint */").
+				From("c"),
+			wantSQL:  "WITH c AS (SELECT id FROM t WHERE x = $1) /* hint */ SELECT * FROM c",
+			wantArgs: []any{1},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("expected args %v, got %v instead", tc.wantArgs, args)
+			}
+		})
+	}
+}

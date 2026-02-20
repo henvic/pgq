@@ -73,6 +73,15 @@ func TestDeleteBuilderSQL(t *testing.T) {
 			wantSQL:  "DELETE FROM films USING (SELECT id FROM producers WHERE name = $1) AS p",
 			wantArgs: []any{"foo"},
 		},
+		{
+			name: "delete_with_cte",
+			b: Delete("orders").
+				With("old_orders", Select("id").From("orders").Where("created_at < ?", "2010-01-01")).
+				Where("id IN (SELECT id FROM old_orders)"),
+			wantSQL: "WITH old_orders AS (SELECT id FROM orders WHERE created_at < $1) " +
+				"DELETE FROM orders WHERE id IN (SELECT id FROM old_orders)",
+			wantArgs: []any{"2010-01-01"},
+		},
 	}
 
 	for _, tc := range testCases {

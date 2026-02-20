@@ -9,6 +9,7 @@ import (
 
 // UpdateBuilder builds SQL UPDATE statements.
 type UpdateBuilder struct {
+	ctes       []cte
 	prefixes   []SQLizer
 	table      string
 	setClauses []setClause
@@ -45,6 +46,13 @@ func (b UpdateBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql := &bytes.Buffer{}
+
+	if len(b.ctes) > 0 {
+		args, err = appendCTEs(b.ctes, sql, args)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(b.prefixes) > 0 {
 		args, err = appendSQL(b.prefixes, sql, " ", args)
@@ -140,6 +148,12 @@ func (b UpdateBuilder) Prefix(sql string, args ...any) UpdateBuilder {
 // PrefixExpr adds an expression to the very beginning of the query
 func (b UpdateBuilder) PrefixExpr(expr SQLizer) UpdateBuilder {
 	b.prefixes = append(b.prefixes, expr)
+	return b
+}
+
+// With adds a Common Table Expression (CTE) to the query.
+func (b UpdateBuilder) With(name string, expr SQLizer) UpdateBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr})
 	return b
 }
 

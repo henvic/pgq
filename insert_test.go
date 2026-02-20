@@ -78,6 +78,19 @@ func TestInsertBuilderSQL(t *testing.T) {
 			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING (SELECT abc FROM atable) AS something",
 			wantArgs: []any{1, 2, 3, 4},
 		},
+		{
+			name: "cte",
+			b: Insert("products_log").
+				With("moved_rows", Delete("products").
+					Where("date >= ?", "2010-10-01").
+					Where("date < ?", "2010-11-01").
+					Returning("*"),
+				).
+				Select(Select("*").From("moved_rows")),
+			wantSQL: "WITH moved_rows AS (DELETE FROM products WHERE date >= $1 AND date < $2 RETURNING *) " +
+				"INSERT INTO products_log SELECT * FROM moved_rows",
+			wantArgs: []any{"2010-10-01", "2010-11-01"},
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc

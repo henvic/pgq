@@ -125,6 +125,17 @@ func TestUpdateBuilderSQL(t *testing.T) {
 				"AS acc WHERE acc.name = $1 AND employees.id = acc.sales_person",
 			wantArgs: []any{"Acme Corporation"},
 		},
+		{
+			name: "with_cte",
+			b: Update("employees").
+				With("acme", Select("id").From("accounts").Where("name = ?", "Acme")).
+				Set("sales_count", Expr("sales_count + 1")).
+				Where("id IN (SELECT id FROM acme)"),
+			wantSQL: "WITH acme AS (SELECT id FROM accounts WHERE name = $1) " +
+				"UPDATE employees SET sales_count = sales_count + 1 " +
+				"WHERE id IN (SELECT id FROM acme)",
+			wantArgs: []any{"Acme"},
+		},
 	}
 
 	for _, tc := range testCases {

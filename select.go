@@ -9,6 +9,7 @@ import (
 // SelectBuilder builds SQL SELECT statements.
 type SelectBuilder struct {
 	placeholder  placeholder
+	ctes         []cte
 	prefixes     []SQLizer
 	options      []string
 	columns      []SQLizer
@@ -45,6 +46,13 @@ func (b SelectBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql := &bytes.Buffer{}
+
+	if len(b.ctes) > 0 {
+		args, err = appendCTEs(b.ctes, sql, args)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(b.prefixes) > 0 {
 		args, err = appendSQL(b.prefixes, sql, " ", args)
@@ -155,6 +163,16 @@ func (b SelectBuilder) Prefix(sql string, args ...any) SelectBuilder {
 // PrefixExpr adds an expression to the very beginning of the query
 func (b SelectBuilder) PrefixExpr(expr SQLizer) SelectBuilder {
 	b.prefixes = append(b.prefixes, expr)
+	return b
+}
+
+// With adds a Common Table Expression (CTE) to the query.
+//
+// Multiple CTEs are supported by chaining With calls; they are rendered as a
+// single WITH clause: WITH name1 AS (...), name2 AS (...).
+// CTEs are rendered before any Prefix expressions.
+func (b SelectBuilder) With(name string, expr SQLizer) SelectBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr})
 	return b
 }
 
