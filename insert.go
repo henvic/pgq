@@ -29,6 +29,15 @@ func (b InsertBuilder) Verb(v string) InsertBuilder {
 
 // SQL builds the query into a SQL string and bound args.
 func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = b.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	sqlStr, err = dollarPlaceholder(sqlStr)
+	return
+}
+
+func (b InsertBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	if b.into == "" {
 		err = errors.New("insert statements must specify a table")
 		return
