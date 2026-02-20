@@ -136,6 +136,24 @@ func TestUpdateBuilderSQL(t *testing.T) {
 				"WHERE id IN (SELECT id FROM acme)",
 			wantArgs: []any{"Acme"},
 		},
+		{
+			name: "with_recursive_cte",
+			b: Update("employees").
+				WithRecursive("mgrs",
+					Union(
+						Select("id").From("employees").Where("manager_id IS NULL"),
+						Select("e.id").From("employees e").Join("mgrs ON mgrs.id = e.manager_id"),
+					),
+				).
+				Set("is_manager", true).
+				Where("id IN (SELECT id FROM mgrs)"),
+			wantSQL: "WITH RECURSIVE mgrs AS " +
+				"(SELECT id FROM employees WHERE manager_id IS NULL " +
+				"UNION " +
+				"SELECT e.id FROM employees e JOIN mgrs ON mgrs.id = e.manager_id) " +
+				"UPDATE employees SET is_manager = $1 WHERE id IN (SELECT id FROM mgrs)",
+			wantArgs: []any{true},
+		},
 	}
 
 	for _, tc := range testCases {

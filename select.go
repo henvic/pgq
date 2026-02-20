@@ -176,6 +176,16 @@ func (b SelectBuilder) With(name string, expr SQLizer) SelectBuilder {
 	return b
 }
 
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+//
+// The WITH clause will be emitted as WITH RECURSIVE whenever at least one CTE
+// is added via WithRecursive. Non-recursive CTEs added via With may appear in
+// the same clause.
+func (b SelectBuilder) WithRecursive(name string, expr UnionBuilder) SelectBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
+	return b
+}
+
 // Distinct adds a DISTINCT clause to the query.
 func (b SelectBuilder) Distinct() SelectBuilder {
 	return b.Options("DISTINCT")
@@ -360,4 +370,50 @@ func (b SelectBuilder) Suffix(sql string, args ...any) SelectBuilder {
 func (b SelectBuilder) SuffixExpr(expr SQLizer) SelectBuilder {
 	b.suffixes = append(b.suffixes, expr)
 	return b
+}
+
+// UnionBuilder composes two SELECT statements with UNION or UNION ALL.
+// It implements both SQLizer and rawSQLizer so it can be used standalone or
+// as a CTE body without premature placeholder numbering.
+type UnionBuilder struct {
+	left  SelectBuilder
+	right SelectBuilder
+	all   bool
+}
+
+func (u UnionBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
+	leftSQL, leftArgs, err := u.left.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	rightSQL, rightArgs, err := u.right.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	if u.all {
+		sqlStr = leftSQL + " UNION ALL " + rightSQL
+	} else {
+		sqlStr = leftSQL + " UNION " + rightSQL
+	}
+	args = append(leftArgs, rightArgs...)
+	return
+}
+
+func (u UnionBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = u.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	sqlStr, err = dollarPlaceholder(sqlStr)
+	return
+}
+
+// Union returns a SQLizer that renders "left UNION right".
+func Union(left, right SelectBuilder) UnionBuilder {
+	return UnionBuilder{left: left, right: right, all: false}
+}
+
+// UnionAll returns a SQLizer that renders "left UNION ALL right".
+func UnionAll(left, right SelectBuilder) UnionBuilder {
+	return UnionBuilder{left: left, right: right, all: true}
 }

@@ -124,6 +124,12 @@ func (b DeleteBuilder) With(name string, expr SQLizer) DeleteBuilder {
 	return b
 }
 
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+func (b DeleteBuilder) WithRecursive(name string, expr UnionBuilder) DeleteBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
+	return b
+}
+
 // From sets the table to be deleted from.
 func (b DeleteBuilder) From(from string) DeleteBuilder {
 	b.from = from

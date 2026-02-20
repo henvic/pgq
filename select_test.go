@@ -582,3 +582,137 @@ func TestSelectBuilderWith(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectBuilderWithRecursive(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		b        SelectBuilder
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name: "recursive query",
+			b: Select("sub_part", "SUM(quantity) as total_quantity").
+				WithRecursive("included_parts(sub_part, part, quantity)", UnionAll(
+					Select("sub_part", "part", "quantity").From("parts").Where("part = ?", "our_product"),
+					Select("p.sub_part", "p.part", "p.quantity * pr.quantity").From("included_parts pr, parts p").Where("p.part = pr.sub_part"),
+				)).
+				From("included_parts").
+				GroupBy("sub_part"),
+			wantSQL: "WITH RECURSIVE included_parts(sub_part, part, quantity) AS (" +
+				"SELECT sub_part, part, quantity FROM parts WHERE part = $1 " +
+				"UNION ALL " +
+				"SELECT p.sub_part, p.part, p.quantity * pr.quantity FROM included_parts pr, parts p WHERE p.part = pr.sub_part) " +
+				"SELECT sub_part, SUM(quantity) as total_quantity FROM included_parts GROUP BY sub_part",
+			wantArgs: []any{"our_product"},
+		},
+		{
+			name: "search tree",
+			b: Select("*").
+				WithRecursive("search_tree(id, link, data)", UnionAll(
+					Select("t.id", "t.link", "t.data").From("tree t"),
+					Select("t.id", "t.link", "t.data").From("tree t, search_tree st").Where("t.id = st.link"),
+				)).
+				From("search_tree"),
+			wantSQL: "WITH RECURSIVE search_tree(id, link, data) AS (" +
+				"SELECT t.id, t.link, t.data FROM tree t " +
+				"UNION ALL " +
+				"SELECT t.id, t.link, t.data FROM tree t, search_tree st WHERE t.id = st.link" +
+				") SELECT * FROM search_tree",
+		},
+		{
+			name: "mix With and WithRecursive emits RECURSIVE",
+			b: Select("*").
+				With("base", Select("id").From("t")).
+				WithRecursive("tree",
+					UnionAll(
+						Select("id").From("nodes").Where("parent IS NULL"),
+						Select("n.id").From("nodes n").Join("tree ON tree.id = n.parent"),
+					),
+				).
+				From("tree"),
+			wantSQL: "WITH RECURSIVE " +
+				"base AS (SELECT id FROM t), " +
+				"tree AS (SELECT id FROM nodes WHERE parent IS NULL UNION ALL SELECT n.id FROM nodes n JOIN tree ON tree.id = n.parent) " +
+				"SELECT * FROM tree",
+		},
+		{
+			name: "only With calls do not emit RECURSIVE",
+			b: Select("*").
+				With("a", Select("id").From("t1")).
+				With("b", Select("id").From("t2")).
+				From("a"),
+			wantSQL: "WITH a AS (SELECT id FROM t1), b AS (SELECT id FROM t2) SELECT * FROM a",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("expected args %v, got %v instead", tc.wantArgs, args)
+			}
+		})
+	}
+}
+
+func TestUnion(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		u        UnionBuilder
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name:    "union no args",
+			u:       Union(Select("id", "name").From("customers"), Select("id", "name").From("employees")),
+			wantSQL: "SELECT id, name FROM customers UNION SELECT id, name FROM employees",
+		},
+		{
+			name:    "union all no args",
+			u:       UnionAll(Select("id", "name").From("customers"), Select("id", "name").From("employees")),
+			wantSQL: "SELECT id, name FROM customers UNION ALL SELECT id, name FROM employees",
+		},
+		{
+			name: "union with args",
+			u: Union(
+				Select("id").From("t").Where("x = ?", 1),
+				Select("id").From("t").Where("x = ?", 2),
+			),
+			wantSQL:  "SELECT id FROM t WHERE x = $1 UNION SELECT id FROM t WHERE x = $2",
+			wantArgs: []any{1, 2},
+		},
+		{
+			name: "union all with args",
+			u: UnionAll(
+				Select("id").From("t").Where("x = ?", 1),
+				Select("id").From("t").Where("x = ?", 2),
+			),
+			wantSQL:  "SELECT id FROM t WHERE x = $1 UNION ALL SELECT id FROM t WHERE x = $2",
+			wantArgs: []any{1, 2},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.u.SQL()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("expected args %v, got %v instead", tc.wantArgs, args)
+			}
+		})
+	}
+}

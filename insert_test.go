@@ -91,6 +91,23 @@ func TestInsertBuilderSQL(t *testing.T) {
 				"INSERT INTO products_log SELECT * FROM moved_rows",
 			wantArgs: []any{"2010-10-01", "2010-11-01"},
 		},
+		{
+			name: "recursive_cte",
+			b: Insert("archive").
+				WithRecursive("tree",
+					UnionAll(
+						Select("id", "data").From("source").Where("parent_id IS NULL"),
+						Select("s.id", "s.data").From("source s").Join("tree ON tree.id = s.parent_id"),
+					),
+				).
+				Columns("id", "data").
+				Select(Select("id", "data").From("tree")),
+			wantSQL: "WITH RECURSIVE tree AS " +
+				"(SELECT id, data FROM source WHERE parent_id IS NULL " +
+				"UNION ALL " +
+				"SELECT s.id, s.data FROM source s JOIN tree ON tree.id = s.parent_id) " +
+				"INSERT INTO archive (id,data) SELECT id, data FROM tree",
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc

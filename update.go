@@ -157,6 +157,12 @@ func (b UpdateBuilder) With(name string, expr SQLizer) UpdateBuilder {
 	return b
 }
 
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+func (b UpdateBuilder) WithRecursive(name string, expr UnionBuilder) UpdateBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
+	return b
+}
+
 // Table sets the table to be updated.
 func (b UpdateBuilder) Table(table string) UpdateBuilder {
 	b.table = table

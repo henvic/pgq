@@ -185,6 +185,12 @@ func (b InsertBuilder) With(name string, expr SQLizer) InsertBuilder {
 	return b
 }
 
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+func (b InsertBuilder) WithRecursive(name string, expr UnionBuilder) InsertBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
+	return b
+}
+
 // Into sets the INTO clause of the query.
 func (b InsertBuilder) Into(from string) InsertBuilder {
 	b.into = from

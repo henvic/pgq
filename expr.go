@@ -444,8 +444,9 @@ func isValue(v any) bool {
 }
 
 type cte struct {
-	name string
-	expr SQLizer
+	name      string
+	expr      SQLizer
+	recursive bool
 }
 
 func (c cte) unfinalizedSQL() (sql string, args []any, err error) {
@@ -458,10 +459,22 @@ func (c cte) unfinalizedSQL() (sql string, args []any, err error) {
 	return
 }
 
-// appendCTEs writes "WITH name1 AS (...), name2 AS (...) " into w and
-// accumulates bound arguments.
+// appendCTEs writes "WITH [RECURSIVE] name1 AS (...), name2 AS (...) " into w
+// and accumulates bound arguments. It emits WITH RECURSIVE when at least one
+// CTE was registered via WithRecursive.
 func appendCTEs(ctes []cte, w io.Writer, args []any) ([]any, error) {
-	io.WriteString(w, "WITH ")
+	recursive := false
+	for _, c := range ctes {
+		if c.recursive {
+			recursive = true
+			break
+		}
+	}
+	if recursive {
+		io.WriteString(w, "WITH RECURSIVE ")
+	} else {
+		io.WriteString(w, "WITH ")
+	}
 	for i, c := range ctes {
 		if i > 0 {
 			io.WriteString(w, ", ")

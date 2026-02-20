@@ -82,6 +82,23 @@ func TestDeleteBuilderSQL(t *testing.T) {
 				"DELETE FROM orders WHERE id IN (SELECT id FROM old_orders)",
 			wantArgs: []any{"2010-01-01"},
 		},
+		{
+			name: "delete_with_recursive_cte",
+			b: Delete("orders").
+				WithRecursive("old_orders",
+					Union(
+						Select("id").From("orders").Where("created_at < ?", "2010-01-01"),
+						Select("o.id").From("orders o").Join("old_orders r ON o.parent_id = r.id"),
+					),
+				).Where("id IN (SELECT id FROM old_orders)").
+				Returning("id"),
+			wantSQL: "WITH RECURSIVE old_orders AS " +
+				"(SELECT id FROM orders WHERE created_at < $1 " +
+				"UNION " +
+				"SELECT o.id FROM orders o JOIN old_orders r ON o.parent_id = r.id) " +
+				"DELETE FROM orders WHERE id IN (SELECT id FROM old_orders) RETURNING id",
+			wantArgs: []any{"2010-01-01"},
+		},
 	}
 
 	for _, tc := range testCases {
