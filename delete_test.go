@@ -57,9 +57,9 @@ func TestDeleteBuilderSQL(t *testing.T) {
 		},
 		{
 			name:     "returning_select",
-			b:        beginning.ReturningSelect(Select("abc").From("atable"), "something"),
-			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING (SELECT abc FROM atable) AS something",
-			wantArgs: []any{0, 1},
+			b:        beginning.ReturningSelect(Select("abc").From("atable").Where("d = ?", 2), "something"),
+			wantSQL:  "WITH prefix AS $1 DELETE FROM a WHERE b = $2 ORDER BY c RETURNING (SELECT abc FROM atable WHERE d = $3) AS something",
+			wantArgs: []any{0, 1, 2},
 		},
 		{
 			name:     "delete_using",

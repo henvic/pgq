@@ -192,6 +192,7 @@ func (b InsertBuilder) Returning(columns ...string) InsertBuilder {
 
 // ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
 func (b InsertBuilder) ReturningSelect(from SelectBuilder, alias string) InsertBuilder {
+	from.placeholder = questionPlaceholder
 	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }

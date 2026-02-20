@@ -218,6 +218,7 @@ func (b UpdateBuilder) Returning(columns ...string) UpdateBuilder {
 
 // ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
 func (b UpdateBuilder) ReturningSelect(from SelectBuilder, alias string) UpdateBuilder {
+	from.placeholder = questionPlaceholder
 	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }

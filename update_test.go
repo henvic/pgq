@@ -92,7 +92,7 @@ func TestUpdateBuilderSQL(t *testing.T) {
 		},
 		{
 			name: "returning_select",
-			b:    beginning.ReturningSelect(Select("abc").From("atable"), "something"),
+			b:    beginning.ReturningSelect(Select("abc").From("atable").Where("f = ?", 4), "something"),
 			wantSQL: "WITH prefix AS $1 " +
 				"UPDATE a SET b = $2 + 1, c = $3, " +
 				"c1 = CASE status WHEN 1 THEN 2 WHEN 2 THEN 1 END, " +
@@ -100,8 +100,8 @@ func TestUpdateBuilderSQL(t *testing.T) {
 				"c3 = (SELECT a FROM b) " +
 				"WHERE d = $6 " +
 				"ORDER BY e " +
-				"RETURNING (SELECT abc FROM atable) AS something",
-			wantArgs: []any{0, 1, 2, "foo", "bar", 3},
+				"RETURNING (SELECT abc FROM atable WHERE f = $7) AS something",
+			wantArgs: []any{0, 1, 2, "foo", "bar", 3, 4},
 		},
 		{
 			name: "from",

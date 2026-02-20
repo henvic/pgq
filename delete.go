@@ -162,6 +162,7 @@ func (b DeleteBuilder) Returning(columns ...string) DeleteBuilder {
 
 // ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
 func (b DeleteBuilder) ReturningSelect(from SelectBuilder, alias string) DeleteBuilder {
+	from.placeholder = questionPlaceholder
 	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }

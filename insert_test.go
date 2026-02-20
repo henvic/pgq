@@ -74,9 +74,9 @@ func TestInsertBuilderSQL(t *testing.T) {
 				Columns("b", "c").
 				Values(1, 2).
 				Values(3, Expr("? + 1", 4)).
-				ReturningSelect(Select("abc").From("atable"), "something"),
-			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING (SELECT abc FROM atable) AS something",
-			wantArgs: []any{1, 2, 3, 4},
+				ReturningSelect(Select("abc").From("atable").Where("d = ?", 5), "something"),
+			wantSQL:  "INSERT INTO a (b,c) VALUES ($1,$2),($3,$4 + 1) RETURNING (SELECT abc FROM atable WHERE d = $5) AS something",
+			wantArgs: []any{1, 2, 3, 4, 5},
 		},
 	}
 	for _, tc := range testCases {
