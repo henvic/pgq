@@ -2,7 +2,7 @@ package pgq
 
 import (
 	"bytes"
-	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -20,6 +20,7 @@ func Placeholders(count int) string {
 func dollarPlaceholder(sql string) (string, error) {
 	buf := &bytes.Buffer{}
 	i := 0
+	var itob [20]byte
 	for {
 		p := strings.Index(sql, "?")
 		if p == -1 {
@@ -36,7 +37,8 @@ func dollarPlaceholder(sql string) (string, error) {
 		} else {
 			i++
 			buf.WriteString(sql[:p])
-			fmt.Fprintf(buf, "$%d", i)
+			buf.WriteByte('$')
+			buf.Write(strconv.AppendInt(itob[:0], int64(i), 10))
 			sql = sql[p+1:]
 		}
 	}
