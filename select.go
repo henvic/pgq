@@ -8,7 +8,6 @@ import (
 
 // SelectBuilder builds SQL SELECT statements.
 type SelectBuilder struct {
-	placeholder  placeholder
 	ctes         []cte
 	prefixes     []SQLizer
 	options      []string
@@ -31,11 +30,7 @@ func (b SelectBuilder) SQL() (sqlStr string, args []any, err error) {
 		return
 	}
 
-	f := b.placeholder
-	if f == nil {
-		f = dollarPlaceholder
-	}
-	sqlStr, err = f(sqlStr)
+	sqlStr, err = dollarPlaceholder(sqlStr)
 	return
 }
 
@@ -233,9 +228,6 @@ func (b SelectBuilder) From(from string) SelectBuilder {
 
 // FromSelect sets a subquery into the FROM clause of the query.
 func (b SelectBuilder) FromSelect(from SelectBuilder, alias string) SelectBuilder {
-	// Prevent misnumbered parameters in nested selects
-	// See https://github.com/Masterminds/squirrel/issues/183
-	from.placeholder = questionPlaceholder
 	b.from = Alias{
 		Expr: from,
 		As:   alias,

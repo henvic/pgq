@@ -108,6 +108,45 @@ func TestInsertBuilderSQL(t *testing.T) {
 				"SELECT s.id, s.data FROM source s JOIN tree ON tree.id = s.parent_id) " +
 				"INSERT INTO archive (id,data) SELECT id, data FROM tree",
 		},
+		{
+			name: "insert_select_params",
+			b: Insert("films").
+				Columns("id", "title").
+				Select(Select("id", "title").From("producers").Where("name = ?", "foo")),
+			wantSQL:  "INSERT INTO films (id,title) SELECT id, title FROM producers WHERE name = $1",
+			wantArgs: []any{"foo"},
+		},
+		{
+			name: "insert_values_select_params",
+			b: Insert("films").
+				Columns("id", "title").
+				Values(1, Select("title").From("other").Where("id = ?", 2)).
+				Suffix("RETURNING id, ?", 3),
+			wantSQL:  "INSERT INTO films (id,title) VALUES ($1,(SELECT title FROM other WHERE id = $2)) RETURNING id, $3",
+			wantArgs: []any{1, 2, 3},
+		},
+		{
+			name: "insert_values_union_params",
+			b: Insert("films").
+				Columns("id", "title").
+				Values(1, Union(
+					Select("title").From("other").Where("id = ?", 2),
+					Select("title").From("another").Where("id = ?", 3),
+				)),
+			wantSQL:  "INSERT INTO films (id,title) VALUES ($1,(SELECT title FROM other WHERE id = $2 UNION SELECT title FROM another WHERE id = $3))",
+			wantArgs: []any{1, 2, 3},
+		},
+		{
+			name: "insert_values_union",
+			b: Insert("t").
+				Columns("id").
+				Values(Union(
+					Select("id").From("a").Where("x = ?", 1),
+					Select("id").From("b").Where("x = ?", 2),
+				)),
+			wantSQL:  "INSERT INTO t (id) VALUES ((SELECT id FROM a WHERE x = $1 UNION SELECT id FROM b WHERE x = $2))",
+			wantArgs: []any{1, 2},
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc

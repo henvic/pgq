@@ -71,11 +71,11 @@ func (b UpdateBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	for i, setClause := range b.setClauses {
 		var valSQL string
 		if vs, ok := setClause.value.(SQLizer); ok {
-			vsql, vargs, err := vs.SQL()
+			vsql, vargs, err := nestedSQL(vs)
 			if err != nil {
 				return "", nil, err
 			}
-			if _, ok := vs.(SelectBuilder); ok {
+			if _, ok := vs.(rawSQLizer); ok {
 				valSQL = fmt.Sprintf("(%s)", vsql)
 			} else {
 				valSQL = vsql
@@ -238,7 +238,6 @@ func (b UpdateBuilder) Returning(columns ...string) UpdateBuilder {
 
 // ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
 func (b UpdateBuilder) ReturningSelect(from SelectBuilder, alias string) UpdateBuilder {
-	from.placeholder = questionPlaceholder
 	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }

@@ -34,7 +34,7 @@ type rawSQLizer interface {
 // not try very hard to ensure it. Additionally, executing the output of this
 // function with any untrusted user input is certainly insecure.
 func Debug(s SQLizer) string {
-	sql, args, err := s.SQL()
+	sql, args, err := nestedSQL(s)
 	if err != nil {
 		return fmt.Sprintf("[SQL error: %s]", err)
 	}

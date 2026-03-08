@@ -123,9 +123,12 @@ func (b InsertBuilder) appendValuesToSQL(w io.Writer, args []any) ([]any, error)
 		valueStrings := make([]string, len(row))
 		for v, val := range row {
 			if vs, ok := val.(SQLizer); ok {
-				vsql, vargs, err := vs.SQL()
+				vsql, vargs, err := nestedSQL(vs)
 				if err != nil {
 					return nil, err
+				}
+				if _, ok := vs.(rawSQLizer); ok {
+					vsql = fmt.Sprintf("(%s)", vsql)
 				}
 				valueStrings[v] = vsql
 				args = append(args, vargs...)
@@ -147,7 +150,7 @@ func (b InsertBuilder) appendSelectToSQL(w io.Writer, args []any) ([]any, error)
 		return args, errors.New("select clause for insert statements are not set")
 	}
 
-	selectClause, sArgs, err := b.selectBuilder.SQL()
+	selectClause, sArgs, err := b.selectBuilder.unfinalizedSQL()
 	if err != nil {
 		return args, err
 	}
@@ -221,7 +224,6 @@ func (b InsertBuilder) Returning(columns ...string) InsertBuilder {
 
 // ReturningSelect adds a RETURNING expressions to the query similar to Using, but takes a Select statement.
 func (b InsertBuilder) ReturningSelect(from SelectBuilder, alias string) InsertBuilder {
-	from.placeholder = questionPlaceholder
 	b.returning = append(b.returning, Alias{Expr: from, As: alias})
 	return b
 }

@@ -74,6 +74,14 @@ func TestDeleteBuilderSQL(t *testing.T) {
 			wantArgs: []any{"foo"},
 		},
 		{
+			name: "delete_using_select_params",
+			b: Delete("films").
+				UsingSelect(Select("id").From("producers").Where("name = ?", "foo"), "p").
+				Where("status = ?", "active"),
+			wantSQL:  "DELETE FROM films USING (SELECT id FROM producers WHERE name = $1) AS p WHERE status = $2",
+			wantArgs: []any{"foo", "active"},
+		},
+		{
 			name: "delete_with_cte",
 			b: Delete("orders").
 				With("old_orders", Select("id").From("orders").Where("created_at < ?", "2010-01-01")).

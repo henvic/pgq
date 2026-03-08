@@ -63,7 +63,7 @@ func (e expr) SQL() (sql string, args []any, err error) {
 
 		if as, ok := ap[0].(SQLizer); ok {
 			// sqlizer argument; expand it and append the result
-			isql, iargs, err = as.SQL()
+			isql, iargs, err = nestedSQL(as)
 			buf.WriteString(sp[:i])
 			buf.WriteString(isql)
 			args = append(args, iargs...)
@@ -95,7 +95,7 @@ func ConcatSQL(ce ...any) (sql string, args []any, err error) {
 		case string:
 			sql += p
 		case SQLizer:
-			pSQL, pArgs, err := p.SQL()
+			pSQL, pArgs, err := nestedSQL(p)
 			if err != nil {
 				return "", nil, err
 			}
@@ -120,7 +120,7 @@ type Alias struct {
 
 // AliasExprSQL returns a SQL query based on the alias.
 func (a Alias) SQL() (sql string, args []any, err error) {
-	sql, args, err = a.Expr.SQL()
+	sql, args, err = nestedSQL(a.Expr)
 	if err == nil {
 		sql = fmt.Sprintf("(%s) AS %s", sql, a.As)
 	}
@@ -162,6 +162,17 @@ func (eq Eq) toSQL(useNotOpr bool) (sql string, args []any, err error) {
 			if val, err = v.Value(); err != nil {
 				return
 			}
+		case SQLizer:
+			var vsql string
+			var vargs []any
+			vsql, vargs, err = nestedSQL(v)
+			if err != nil {
+				return
+			}
+			expr = fmt.Sprintf("%s %s (%s)", key, equalOpr, vsql)
+			args = append(args, vargs...)
+			exprs = append(exprs, expr)
+			continue
 		}
 
 		r := reflect.ValueOf(val)
@@ -228,6 +239,17 @@ func (lk Like) toSQL(opr string) (sql string, args []any, err error) {
 			if val, err = v.Value(); err != nil {
 				return
 			}
+		case SQLizer:
+			var vsql string
+			var vargs []any
+			vsql, vargs, err = nestedSQL(v)
+			if err != nil {
+				return
+			}
+			expr = fmt.Sprintf("%s %s (%s)", key, opr, vsql)
+			args = append(args, vargs...)
+			exprs = append(exprs, expr)
+			continue
 		}
 
 		if val == nil {
@@ -312,6 +334,17 @@ func (lt Lt) toSQL(opposite, orEq bool) (sql string, args []any, err error) {
 			if val, err = v.Value(); err != nil {
 				return
 			}
+		case SQLizer:
+			var vsql string
+			var vargs []any
+			vsql, vargs, err = nestedSQL(v)
+			if err != nil {
+				return
+			}
+			expr = fmt.Sprintf("%s %s (%s)", key, opr, vsql)
+			args = append(args, vargs...)
+			exprs = append(exprs, expr)
+			continue
 		}
 
 		if val == nil {

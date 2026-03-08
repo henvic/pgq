@@ -14,10 +14,8 @@ func (p wherePart) SQL() (sql string, args []any, err error) {
 	switch pred := p.pred.(type) {
 	case nil:
 		// no-op
-	case rawSQLizer:
-		return pred.unfinalizedSQL()
 	case SQLizer:
-		return pred.SQL()
+		return nestedSQL(pred)
 	case map[string]any:
 		return Eq(pred).SQL()
 	case string:

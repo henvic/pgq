@@ -6,15 +6,6 @@ import (
 	"strings"
 )
 
-// placeholder takes a SQL statement and replaces each question mark
-// placeholder with a (possibly different) SQL placeholder.
-type placeholder func(sql string) (string, error)
-
-// questionPlaceholder just leaves question marks ("?") as placeholders.
-func questionPlaceholder(sql string) (string, error) {
-	return sql, nil
-}
-
 // Placeholders returns a string with count ? placeholders joined with commas.
 func Placeholders(count int) string {
 	if count < 1 {

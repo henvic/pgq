@@ -108,6 +108,44 @@ func TestNotEqSQL(t *testing.T) {
 	}
 }
 
+func TestEqSubquerySQL(t *testing.T) {
+	t.Parallel()
+	b := Eq{"id": Select("id").From("other").Where("x = ?", 1)}
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	want := "id = (SELECT id FROM other WHERE x = ?)"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+
+	expectedArgs := []any{1}
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
+}
+
+func TestNotEqSubquerySQL(t *testing.T) {
+	t.Parallel()
+	b := NotEq{"id": Select("id").From("other").Where("x = ?", 1)}
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	want := "id <> (SELECT id FROM other WHERE x = ?)"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+
+	expectedArgs := []any{1}
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
+}
+
 func TestEqNotInSQL(t *testing.T) {
 	t.Parallel()
 	b := NotEq{"id": []int{1, 2, 3}}
@@ -200,6 +238,43 @@ func TestLtSQL(t *testing.T) {
 	expectedArgs := []any{1}
 	if !reflect.DeepEqual(expectedArgs, args) {
 		t.Errorf("wanted %v, got %v instead", args, expectedArgs)
+	}
+}
+
+func TestLtSubquerySQL(t *testing.T) {
+	t.Parallel()
+	b := Lt{"score": Select("avg(score)").From("results").Where("active = ?", true)}
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	want := "score < (SELECT avg(score) FROM results WHERE active = ?)"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+
+	expectedArgs := []any{true}
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
+}
+
+func TestGtSubquerySQL(t *testing.T) {
+	t.Parallel()
+	b := Gt{"score": Select("avg(score)").From("results")}
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	want := "score > (SELECT avg(score) FROM results)"
+	if want != sql {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+
+	if len(args) != 0 {
+		t.Errorf("wanted 0 arguments, got %d instead", len(args))
 	}
 }
 

@@ -13,6 +13,15 @@ func TestDebug(t *testing.T) {
 	}
 }
 
+func TestDebugSelect(t *testing.T) {
+	t.Parallel()
+	sqlizer := Select("id", "name").From("users").Where("id = ?", 42).Where("active = ?", true)
+	want := "SELECT id, name FROM users WHERE id = '42' AND active = 'true'"
+	if got := Debug(sqlizer); got != want {
+		t.Errorf("expected %q, got %q instead", want, got)
+	}
+}
+
 func TestDebugSQLizerErrors(t *testing.T) {
 	t.Parallel()
 	var errorMessages = []struct {

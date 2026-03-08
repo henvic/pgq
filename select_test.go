@@ -453,6 +453,29 @@ func TestRemoveColumns(t *testing.T) {
 	}
 }
 
+func TestSelectBuilderColumnAliasSubqueryParams(t *testing.T) {
+	t.Parallel()
+	subQ := Select("name").From("producers").Where("active = ?", true)
+	b := Select("id").
+		Column(Alias{Expr: subQ, As: "producer_name"}).
+		From("films").
+		Where("id = ?", 42)
+	sql, args, err := b.SQL()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	want := "SELECT id, (SELECT name FROM producers WHERE active = $1) AS producer_name FROM films WHERE id = $2"
+	if sql != want {
+		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
+	}
+
+	expectedArgs := []any{true, 42}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("wanted %v, got %v instead", expectedArgs, args)
+	}
+}
+
 func TestSelectBuilder_PrefixExpr_NestedUpdateDollar(t *testing.T) {
 	t.Parallel()
 	nestedBuilder := Update("foo").Prefix("WITH updated AS (").

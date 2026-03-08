@@ -126,6 +126,18 @@ func TestUpdateBuilderSQL(t *testing.T) {
 			wantArgs: []any{"Acme Corporation"},
 		},
 		{
+			name: "from_select_params",
+			b: Update("employees").Set("sales_count", Expr("sales_count + 1")).FromSelect(
+				Select("name").From("accounts").Where("status = ?", "active"), "acc",
+			).
+				Where("acc.name = ?", "Acme Corporation").
+				Where("employees.id = acc.sales_person"),
+			wantSQL: "UPDATE employees SET sales_count = sales_count + 1 " +
+				"FROM (SELECT name FROM accounts WHERE status = $1) " +
+				"AS acc WHERE acc.name = $2 AND employees.id = acc.sales_person",
+			wantArgs: []any{"active", "Acme Corporation"},
+		},
+		{
 			name: "with_cte",
 			b: Update("employees").
 				With("acme", Select("id").From("accounts").Where("name = ?", "Acme")).
@@ -153,6 +165,25 @@ func TestUpdateBuilderSQL(t *testing.T) {
 				"SELECT e.id FROM employees e JOIN mgrs ON mgrs.id = e.manager_id) " +
 				"UPDATE employees SET is_manager = $1 WHERE id IN (SELECT id FROM mgrs)",
 			wantArgs: []any{true},
+		},
+		{
+			name: "update_set_select_params",
+			b: Update("films").
+				Set("producer_id", Select("id").From("producers").Where("name = ?", "foo")).
+				Where("id = ?", 123),
+			wantSQL:  "UPDATE films SET producer_id = (SELECT id FROM producers WHERE name = $1) WHERE id = $2",
+			wantArgs: []any{"foo", 123},
+		},
+		{
+			name: "update_set_union",
+			b: Update("t").
+				Set("val", Union(
+					Select("v").From("a").Where("x = ?", 1),
+					Select("v").From("b").Where("x = ?", 2),
+				)).
+				Where("id = ?", 3),
+			wantSQL:  "UPDATE t SET val = (SELECT v FROM a WHERE x = $1 UNION SELECT v FROM b WHERE x = $2) WHERE id = $3",
+			wantArgs: []any{1, 2, 3},
 		},
 	}
 
