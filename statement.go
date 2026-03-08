@@ -53,16 +53,6 @@ func Insert(into string) InsertBuilder {
 	return InsertBuilder{into: into}
 }
 
-// Replace returns a new InsertBuilder with the statement keyword set to
-// "REPLACE" and with the given table name.
-//
-// See InsertBuilder.Into.
-func Replace(into string) InsertBuilder {
-	builder := InsertBuilder{}
-	builder.verb = "REPLACE"
-	return builder.Into(into)
-}
-
 // Update returns a new UpdateBuilder with the given table name.
 //
 // See UpdateBuilder.Table.

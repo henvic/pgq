@@ -226,7 +226,7 @@ func (neq NotEq) SQL() (sql string, args []any, err error) {
 // Like is syntactic sugar for use with LIKE conditions.
 // Ex:
 //
-//	.Where(Like{"name": "%irrel"})
+//	.Where(Like{"name": "%elephant"})
 type Like map[string]any
 
 func (lk Like) toSQL(opr string) (sql string, args []any, err error) {
@@ -277,7 +277,7 @@ func (lk Like) SQL() (sql string, args []any, err error) {
 // NotLike is syntactic sugar for use with LIKE conditions.
 // Ex:
 //
-//	.Where(NotLike{"name": "%irrel"})
+//	.Where(NotLike{"name": "%elephant"})
 type NotLike Like
 
 func (nlk NotLike) SQL() (sql string, args []any, err error) {

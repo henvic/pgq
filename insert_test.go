@@ -281,27 +281,11 @@ func TestInsertBuilderSelect(t *testing.T) {
 	}
 }
 
-func TestInsertBuilderReplace(t *testing.T) {
-	t.Parallel()
-	b := Replace("table").Values(1)
-
-	want := "REPLACE INTO table VALUES ($1)"
-
-	sql, _, err := b.SQL()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if want != sql {
-		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
-	}
-}
-
 func TestInsertBuilderVerb(t *testing.T) {
 	t.Parallel()
-	b := Insert("table").Verb("REPLACE").Values(1)
+	b := Insert("table").Verb("UPSERT").Values(1)
 
-	want := "REPLACE INTO table VALUES ($1)"
+	want := "UPSERT INTO table VALUES ($1)"
 
 	sql, _, err := b.SQL()
 	if err != nil {
