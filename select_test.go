@@ -51,16 +51,15 @@ func TestSelectBuilderSQL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	want :=
-		"WITH prefix AS $1 " +
-			"SELECT DISTINCT a, b, c, IF(d IN ($2,$3,$4), 1, 0) as stat_column, a > $5, " +
-			"(b = ANY ($6)) AS b_alias, " +
-			"(SELECT aa, bb FROM dd) AS subq " +
-			"FROM e " +
-			"CROSS JOIN j1 JOIN j2 LEFT JOIN j3 RIGHT JOIN j4 INNER JOIN j5 CROSS JOIN j6 " +
-			"WHERE f = $7 AND g = $8 AND h = $9 AND i = ANY ($10) AND (j = $11 OR (k = $12 AND true)) " +
-			"GROUP BY l HAVING m = n ORDER BY $13 DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
-			"FETCH FIRST $14 ROWS ONLY"
+	want := "WITH prefix AS $1 " +
+		"SELECT DISTINCT a, b, c, IF(d IN ($2,$3,$4), 1, 0) as stat_column, a > $5, " +
+		"(b = ANY ($6)) AS b_alias, " +
+		"(SELECT aa, bb FROM dd) AS subq " +
+		"FROM e " +
+		"CROSS JOIN j1 JOIN j2 LEFT JOIN j3 RIGHT JOIN j4 INNER JOIN j5 CROSS JOIN j6 " +
+		"WHERE f = $7 AND g = $8 AND h = $9 AND i = ANY ($10) AND (j = $11 OR (k = $12 AND true)) " +
+		"GROUP BY l HAVING m = n ORDER BY $13 DESC, o ASC, p DESC LIMIT 12 OFFSET 13 " +
+		"FETCH FIRST $14 ROWS ONLY"
 	if want != sql {
 		t.Errorf("expected SQL to be %q, got %q instead", want, sql)
 	}
@@ -203,7 +202,6 @@ func TestSelectBuilderNestedSelectJoin(t *testing.T) {
 func TestSelectWithOptions(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Options("ALL").SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -215,7 +213,6 @@ func TestSelectWithOptions(t *testing.T) {
 func TestSelectWithRemoveLimit(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Limit(10).RemoveLimit().SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -227,7 +224,6 @@ func TestSelectWithRemoveLimit(t *testing.T) {
 func TestSelectWithRemoveOffset(t *testing.T) {
 	t.Parallel()
 	sql, _, err := Select("*").From("foo").Offset(10).RemoveOffset().SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -242,7 +238,6 @@ func TestSelectBuilderNestedSelectDollar(t *testing.T) {
 		From("bar").Where("y = ?", 42).Suffix(")")
 	outerSQL, _, err := Select("*").
 		From("foo").Where("x = ?").Where(nestedBuilder).SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -464,7 +459,6 @@ func TestSelectBuilder_PrefixExpr_NestedUpdateDollar(t *testing.T) {
 		Set("x", 42).Where("x = ?", 41).Returning("*").Suffix(")")
 	outerSQL, _, err := Select("*").
 		From("updated").Where("y = ?", 11).PrefixExpr(nestedBuilder).SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -480,12 +474,238 @@ func TestSelectBuilder_PrefixExpr_NestedDeleteDollar(t *testing.T) {
 		Where("x = ?", 41).Returning("*").Suffix(")")
 	outerSQL, _, err := Select("*").
 		From("deleted").Where("y = ?", 11).PrefixExpr(nestedBuilder).SQL()
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	want := "WITH deleted AS ( DELETE FROM foo WHERE x = $1 RETURNING * ) SELECT * FROM deleted WHERE y = $2"
 	if outerSQL != want {
 		t.Errorf("expected %q, got %v", want, outerSQL)
+	}
+}
+
+func TestSelectBuilderWith(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		b        SelectBuilder
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name: "with_cte",
+			b: Select("region", "product", "SUM(quantity) AS product_units", "SUM(amount) AS product_sales").
+				With("regional_sales", Select("region", "SUM(amount) AS total_sales").
+					From("orders").
+					GroupBy("region")).
+				With("top_regions", Select("region").
+					From("regional_sales").
+					Where("total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)")).
+				From("orders").
+				Where("region IN (SELECT region FROM top_regions)").
+				GroupBy("region", "product"),
+			wantSQL: "WITH regional_sales AS (SELECT region, SUM(amount) AS total_sales FROM orders GROUP BY region), " +
+				"top_regions AS (SELECT region FROM regional_sales WHERE total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)) " +
+				"SELECT region, product, SUM(quantity) AS product_units, SUM(amount) AS product_sales " +
+				"FROM orders WHERE region IN (SELECT region FROM top_regions) GROUP BY region, product",
+			wantArgs: nil,
+		},
+		{
+			name: "cte with args",
+			b: Select("id", "total").
+				With("totals", Select("id", "SUM(amount) AS total").From("orders").Where("amount > ?", 100).GroupBy("id")).
+				From("totals").
+				Where("total > ?", 500),
+			wantSQL: "WITH totals AS (SELECT id, SUM(amount) AS total FROM orders WHERE amount > $1 GROUP BY id) " +
+				"SELECT id, total FROM totals WHERE total > $2",
+			wantArgs: []any{100, 500},
+		},
+		{
+			name: "cte body is insert returning",
+			b: Select("*").
+				With("inserted", Insert("orders").
+					Columns("region", "amount").
+					Values("West", 42).
+					Returning("id")).
+				From("inserted"),
+			wantSQL: "WITH inserted AS (INSERT INTO orders (region,amount) VALUES ($1,$2) RETURNING id) " +
+				"SELECT * FROM inserted",
+			wantArgs: []any{"West", 42},
+		},
+		{
+			name: "cte body is update returning",
+			b: Select("*").
+				With("moved", Update("old_table").Set("status", "archived").Where("id = ?", 42).Returning("*")).
+				From("moved"),
+			wantSQL: "WITH moved AS (UPDATE old_table SET status = $1 WHERE id = $2 RETURNING *) " +
+				"SELECT * FROM moved",
+			wantArgs: []any{"archived", 42},
+		},
+		{
+			name: "cte body is delete returning",
+			b: Select("*").
+				With("removed", Delete("old_table").Where("id = ?", 7).Returning("*")).
+				From("removed"),
+			wantSQL: "WITH removed AS (DELETE FROM old_table WHERE id = $1 RETURNING *) " +
+				"SELECT * FROM removed",
+			wantArgs: []any{7},
+		},
+		{
+			name: "cte with prefix coexist",
+			b: Select("*").
+				With("c", Select("id").From("t").Where("x = ?", 1)).
+				Prefix("/* hint */").
+				From("c"),
+			wantSQL:  "WITH c AS (SELECT id FROM t WHERE x = $1) /* hint */ SELECT * FROM c",
+			wantArgs: []any{1},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("expected args %v, got %v instead", tc.wantArgs, args)
+			}
+		})
+	}
+}
+
+func TestSelectBuilderWithRecursive(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		b        SelectBuilder
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name: "recursive query",
+			b: Select("sub_part", "SUM(quantity) as total_quantity").
+				WithRecursive("included_parts(sub_part, part, quantity)", UnionAll(
+					Select("sub_part", "part", "quantity").From("parts").Where("part = ?", "our_product"),
+					Select("p.sub_part", "p.part", "p.quantity * pr.quantity").From("included_parts pr, parts p").Where("p.part = pr.sub_part"),
+				)).
+				From("included_parts").
+				GroupBy("sub_part"),
+			wantSQL: "WITH RECURSIVE included_parts(sub_part, part, quantity) AS (" +
+				"SELECT sub_part, part, quantity FROM parts WHERE part = $1 " +
+				"UNION ALL " +
+				"SELECT p.sub_part, p.part, p.quantity * pr.quantity FROM included_parts pr, parts p WHERE p.part = pr.sub_part) " +
+				"SELECT sub_part, SUM(quantity) as total_quantity FROM included_parts GROUP BY sub_part",
+			wantArgs: []any{"our_product"},
+		},
+		{
+			name: "search tree",
+			b: Select("*").
+				WithRecursive("search_tree(id, link, data)", UnionAll(
+					Select("t.id", "t.link", "t.data").From("tree t"),
+					Select("t.id", "t.link", "t.data").From("tree t, search_tree st").Where("t.id = st.link"),
+				)).
+				From("search_tree"),
+			wantSQL: "WITH RECURSIVE search_tree(id, link, data) AS (" +
+				"SELECT t.id, t.link, t.data FROM tree t " +
+				"UNION ALL " +
+				"SELECT t.id, t.link, t.data FROM tree t, search_tree st WHERE t.id = st.link" +
+				") SELECT * FROM search_tree",
+		},
+		{
+			name: "mix With and WithRecursive emits RECURSIVE",
+			b: Select("*").
+				With("base", Select("id").From("t")).
+				WithRecursive("tree",
+					UnionAll(
+						Select("id").From("nodes").Where("parent IS NULL"),
+						Select("n.id").From("nodes n").Join("tree ON tree.id = n.parent"),
+					),
+				).
+				From("tree"),
+			wantSQL: "WITH RECURSIVE " +
+				"base AS (SELECT id FROM t), " +
+				"tree AS (SELECT id FROM nodes WHERE parent IS NULL UNION ALL SELECT n.id FROM nodes n JOIN tree ON tree.id = n.parent) " +
+				"SELECT * FROM tree",
+		},
+		{
+			name: "only With calls do not emit RECURSIVE",
+			b: Select("*").
+				With("a", Select("id").From("t1")).
+				With("b", Select("id").From("t2")).
+				From("a"),
+			wantSQL: "WITH a AS (SELECT id FROM t1), b AS (SELECT id FROM t2) SELECT * FROM a",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.b.SQL()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("expected args %v, got %v instead", tc.wantArgs, args)
+			}
+		})
+	}
+}
+
+func TestUnion(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		u        UnionBuilder
+		wantSQL  string
+		wantArgs []any
+	}{
+		{
+			name:    "union no args",
+			u:       Union(Select("id", "name").From("customers"), Select("id", "name").From("employees")),
+			wantSQL: "SELECT id, name FROM customers UNION SELECT id, name FROM employees",
+		},
+		{
+			name:    "union all no args",
+			u:       UnionAll(Select("id", "name").From("customers"), Select("id", "name").From("employees")),
+			wantSQL: "SELECT id, name FROM customers UNION ALL SELECT id, name FROM employees",
+		},
+		{
+			name: "union with args",
+			u: Union(
+				Select("id").From("t").Where("x = ?", 1),
+				Select("id").From("t").Where("x = ?", 2),
+			),
+			wantSQL:  "SELECT id FROM t WHERE x = $1 UNION SELECT id FROM t WHERE x = $2",
+			wantArgs: []any{1, 2},
+		},
+		{
+			name: "union all with args",
+			u: UnionAll(
+				Select("id").From("t").Where("x = ?", 1),
+				Select("id").From("t").Where("x = ?", 2),
+			),
+			wantSQL:  "SELECT id FROM t WHERE x = $1 UNION ALL SELECT id FROM t WHERE x = $2",
+			wantArgs: []any{1, 2},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sql, args, err := tc.u.SQL()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if sql != tc.wantSQL {
+				t.Errorf("expected SQL to be %q, got %q instead", tc.wantSQL, sql)
+			}
+			if !reflect.DeepEqual(args, tc.wantArgs) {
+				t.Errorf("expected args %v, got %v instead", tc.wantArgs, args)
+			}
+		})
 	}
 }

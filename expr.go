@@ -3,6 +3,7 @@ package pgq
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"reflect"
 	"sort"
 	"strings"
@@ -440,4 +441,51 @@ func isValue(v any) bool {
 		return true
 	}
 	return false
+}
+
+type cte struct {
+	name      string
+	expr      SQLizer
+	recursive bool
+}
+
+func (c cte) unfinalizedSQL() (sql string, args []any, err error) {
+	var bodySQL string
+	bodySQL, args, err = nestedSQL(c.expr)
+	if err != nil {
+		return
+	}
+	sql = c.name + " AS (" + bodySQL + ")"
+	return
+}
+
+// appendCTEs writes "WITH [RECURSIVE] name1 AS (...), name2 AS (...) " into w
+// and accumulates bound arguments. It emits WITH RECURSIVE when at least one
+// CTE was registered via WithRecursive.
+func appendCTEs(ctes []cte, w io.Writer, args []any) ([]any, error) {
+	recursive := false
+	for _, c := range ctes {
+		if c.recursive {
+			recursive = true
+			break
+		}
+	}
+	if recursive {
+		io.WriteString(w, "WITH RECURSIVE ")
+	} else {
+		io.WriteString(w, "WITH ")
+	}
+	for i, c := range ctes {
+		if i > 0 {
+			io.WriteString(w, ", ")
+		}
+		cteSQL, cteArgs, err := c.unfinalizedSQL()
+		if err != nil {
+			return nil, err
+		}
+		io.WriteString(w, cteSQL)
+		args = append(args, cteArgs...)
+	}
+	io.WriteString(w, " ")
+	return args, nil
 }

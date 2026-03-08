@@ -11,6 +11,7 @@ import (
 
 // InsertBuilder builds SQL INSERT statements.
 type InsertBuilder struct {
+	ctes          []cte
 	prefixes      []SQLizer
 	verb          string
 	into          string
@@ -29,6 +30,15 @@ func (b InsertBuilder) Verb(v string) InsertBuilder {
 
 // SQL builds the query into a SQL string and bound args.
 func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = b.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	sqlStr, err = dollarPlaceholder(sqlStr)
+	return
+}
+
+func (b InsertBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	if b.into == "" {
 		err = errors.New("insert statements must specify a table")
 		return
@@ -39,6 +49,13 @@ func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql := &bytes.Buffer{}
+
+	if len(b.ctes) > 0 {
+		args, err = appendCTEs(b.ctes, sql, args)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(b.prefixes) > 0 {
 		args, err = appendSQL(b.prefixes, sql, " ", args)
@@ -90,7 +107,7 @@ func (b InsertBuilder) SQL() (sqlStr string, args []any, err error) {
 		}
 	}
 
-	sqlStr, err = dollarPlaceholder(sql.String())
+	sqlStr = sql.String()
 	return
 }
 
@@ -159,6 +176,18 @@ func (b InsertBuilder) Prefix(sql string, args ...any) InsertBuilder {
 // PrefixExpr adds an expression to the very beginning of the query
 func (b InsertBuilder) PrefixExpr(expr SQLizer) InsertBuilder {
 	b.prefixes = append(b.prefixes, expr)
+	return b
+}
+
+// With adds a Common Table Expression (CTE) to the query.
+func (b InsertBuilder) With(name string, expr SQLizer) InsertBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr})
+	return b
+}
+
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+func (b InsertBuilder) WithRecursive(name string, expr UnionBuilder) InsertBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
 	return b
 }
 

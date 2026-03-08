@@ -1,6 +1,6 @@
 // package pgq provides a fluent SQL generator.
 //
-// See https://github.com/Masterminds/pgq for examples.
+// See https://github.com/henvic/pgq for examples.
 package pgq
 
 import (

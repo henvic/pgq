@@ -8,6 +8,7 @@ import (
 
 // DeleteBuilder builds SQL DELETE statements.
 type DeleteBuilder struct {
+	ctes       []cte
 	prefixes   []SQLizer
 	from       string
 	usingParts []SQLizer
@@ -35,6 +36,13 @@ func (b DeleteBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql := &bytes.Buffer{}
+
+	if len(b.ctes) > 0 {
+		args, err = appendCTEs(b.ctes, sql, args)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(b.prefixes) > 0 {
 		args, err = appendSQL(b.prefixes, sql, " ", args)
@@ -107,6 +115,18 @@ func (b DeleteBuilder) Prefix(sql string, args ...any) DeleteBuilder {
 // PrefixExpr adds an expression to the very beginning of the query
 func (b DeleteBuilder) PrefixExpr(expr SQLizer) DeleteBuilder {
 	b.prefixes = append(b.prefixes, expr)
+	return b
+}
+
+// With adds a Common Table Expression (CTE) to the query.
+func (b DeleteBuilder) With(name string, expr SQLizer) DeleteBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr})
+	return b
+}
+
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+func (b DeleteBuilder) WithRecursive(name string, expr UnionBuilder) DeleteBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
 	return b
 }
 

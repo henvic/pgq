@@ -9,6 +9,7 @@ import (
 // SelectBuilder builds SQL SELECT statements.
 type SelectBuilder struct {
 	placeholder  placeholder
+	ctes         []cte
 	prefixes     []SQLizer
 	options      []string
 	columns      []SQLizer
@@ -45,6 +46,13 @@ func (b SelectBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
 	}
 
 	sql := &bytes.Buffer{}
+
+	if len(b.ctes) > 0 {
+		args, err = appendCTEs(b.ctes, sql, args)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(b.prefixes) > 0 {
 		args, err = appendSQL(b.prefixes, sql, " ", args)
@@ -155,6 +163,26 @@ func (b SelectBuilder) Prefix(sql string, args ...any) SelectBuilder {
 // PrefixExpr adds an expression to the very beginning of the query
 func (b SelectBuilder) PrefixExpr(expr SQLizer) SelectBuilder {
 	b.prefixes = append(b.prefixes, expr)
+	return b
+}
+
+// With adds a Common Table Expression (CTE) to the query.
+//
+// Multiple CTEs are supported by chaining With calls; they are rendered as a
+// single WITH clause: WITH name1 AS (...), name2 AS (...).
+// CTEs are rendered before any Prefix expressions.
+func (b SelectBuilder) With(name string, expr SQLizer) SelectBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr})
+	return b
+}
+
+// WithRecursive adds a recursive Common Table Expression (CTE) to the query.
+//
+// The WITH clause will be emitted as WITH RECURSIVE whenever at least one CTE
+// is added via WithRecursive. Non-recursive CTEs added via With may appear in
+// the same clause.
+func (b SelectBuilder) WithRecursive(name string, expr UnionBuilder) SelectBuilder {
+	b.ctes = append(b.ctes, cte{name: name, expr: expr, recursive: true})
 	return b
 }
 
@@ -342,4 +370,50 @@ func (b SelectBuilder) Suffix(sql string, args ...any) SelectBuilder {
 func (b SelectBuilder) SuffixExpr(expr SQLizer) SelectBuilder {
 	b.suffixes = append(b.suffixes, expr)
 	return b
+}
+
+// UnionBuilder composes two SELECT statements with UNION or UNION ALL.
+// It implements both SQLizer and rawSQLizer so it can be used standalone or
+// as a CTE body without premature placeholder numbering.
+type UnionBuilder struct {
+	left  SelectBuilder
+	right SelectBuilder
+	all   bool
+}
+
+func (u UnionBuilder) unfinalizedSQL() (sqlStr string, args []any, err error) {
+	leftSQL, leftArgs, err := u.left.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	rightSQL, rightArgs, err := u.right.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	if u.all {
+		sqlStr = leftSQL + " UNION ALL " + rightSQL
+	} else {
+		sqlStr = leftSQL + " UNION " + rightSQL
+	}
+	args = append(leftArgs, rightArgs...)
+	return
+}
+
+func (u UnionBuilder) SQL() (sqlStr string, args []any, err error) {
+	sqlStr, args, err = u.unfinalizedSQL()
+	if err != nil {
+		return
+	}
+	sqlStr, err = dollarPlaceholder(sqlStr)
+	return
+}
+
+// Union returns a SQLizer that renders "left UNION right".
+func Union(left, right SelectBuilder) UnionBuilder {
+	return UnionBuilder{left: left, right: right, all: false}
+}
+
+// UnionAll returns a SQLizer that renders "left UNION ALL right".
+func UnionAll(left, right SelectBuilder) UnionBuilder {
+	return UnionBuilder{left: left, right: right, all: true}
 }
